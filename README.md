@@ -16,6 +16,8 @@ The Macedonia panel queries GDELT for Macedonia/Skopje coverage on first load an
 
 Selecting **Show bulletin areas on map** also adds the latest parsed MVR event summaries to **Live feeds**, with the public location, date, short text, and official bulletin link. Sensitive personal details are excluded while publicly named streets, squares, airports, and routes remain visible.
 
+MVR events are displayed as individual event cards and map popups. Red marks deaths, yellow marks injuries or property damage, orange marks theft/burglary or non-fatal traffic incidents, and purple marks other police events. Publicly named streets and intersections are mapped precisely; private homes and identifying details are generalized.
+
 ## Run (static, no Node required)
 
 Open `index.html` directly, or publish the repository with GitHub Pages, Netlify, Cloudflare Pages, or another static host. Map, evidence capture, IndexedDB persistence, timeline, and JSON backup/restore work without Node.
