@@ -12,11 +12,11 @@ The **Macedonia OSINT** tab is scoped to North Macedonia discovery: it can query
 
 It also links the latest ten official MVR daily bulletins and can open them in an in-workspace reader panel, with a direct-link fallback when MVR blocks iframe embedding. Explicitly named public streets, squares, airports, and routes may be plotted at public-location precision; private addresses, homes, victims, minors, and domestic-violence locations are deliberately generalized and are not plotted.
 
-The Macedonia panel queries GDELT for Macedonia/Skopje coverage on first load and every five minutes. A separate Skopje municipality-events view classifies articles that explicitly mention a City of Skopje or nearby municipality and places the event at that municipality's public administrative centroid; it does not render municipality markers by themselves.
+The Macedonia panel queries GDELT for Macedonia/Skopje coverage on first load and every five minutes. Results are restricted to Macedonian Cyrillic, Macedonian/other Latin-script, and English article text; Greek, Arabic, CJK, and other unrelated-script results are discarded in the browser. A separate Skopje municipality-events view classifies articles that explicitly mention a City of Skopje or nearby municipality and places the event at that municipality's public administrative centroid; it does not render municipality markers by themselves.
 
 Selecting **Show bulletin areas on map** also adds the latest parsed MVR event summaries to **Live feeds**, with the public location, date, short text, and official bulletin link. Sensitive personal details are excluded while publicly named streets, squares, airports, and routes remain visible.
 
-MVR events are displayed as individual event cards and map popups. Red marks deaths, yellow marks injuries or property damage, orange marks theft/burglary or non-fatal traffic incidents, and purple marks other police events. Publicly named streets and intersections are mapped precisely; private homes and identifying details are generalized.
+MVR events are displayed as individual event cards and map popups. Red marks deaths, yellow marks injuries or property damage, orange marks theft/burglary or non-fatal traffic incidents, and purple marks other police events. Publicly named streets and intersections are mapped precisely; private homes and identifying details are generalized. The default map view is centered on North Macedonia and the MVR action fits all extracted event locations.
 
 ## Run (static, no Node required)
 
