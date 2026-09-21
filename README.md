@@ -18,6 +18,8 @@ Selecting **Show bulletin areas on map** also adds the latest parsed MVR event s
 
 MVR events are displayed as individual event cards and map popups. Red marks deaths, yellow marks injuries or property damage, orange marks theft/burglary or non-fatal traffic incidents, and purple marks other police events. Publicly named streets and intersections are mapped precisely; private homes and identifying details are generalized. The default map view is centered on North Macedonia and the MVR action fits all extracted event locations.
 
+MVR event markers are kept separate from the rotating earthquake/flight/fire markers, so refreshing public feeds does not remove the bulletin locations. Bulletin events are also loaded into the map/live panel at startup.
+
 ## Run (static, no Node required)
 
 Open `index.html` directly, or publish the repository with GitHub Pages, Netlify, Cloudflare Pages, or another static host. Map, evidence capture, IndexedDB persistence, timeline, and JSON backup/restore work without Node.
