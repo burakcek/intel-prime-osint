@@ -1,1 +1,494 @@
-undefined
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Intel Prime — OSINT Command Center</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#070c14;--bg2:#0d1520;--bg3:#111d2e;--panel:#0f1a28;--border:rgba(56,189,248,.12);--border2:rgba(56,189,248,.28);--accent:#38bdf8;--gold:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#a78bfa;--orange:#fb923c;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--r:8px;--font:'Inter',system-ui,sans-serif}
+html,body{margin:0;padding:0;overflow:hidden;}
+.app{position:fixed;inset:0;display:grid;grid-template-rows:46px 1fr;grid-template-columns:200px 1fr 280px;}
+.topbar{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;z-index:1000;flex-wrap:nowrap;overflow:hidden}
+.logo-mark{width:24px;height:24px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#07101c;flex-shrink:0}
+.logo-text{font-size:11px;font-weight:600;letter-spacing:.5px;white-space:nowrap}
+.logo-sub{font-size:8px;color:var(--text3)}
+.sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.pill{display:flex;align-items:center;gap:3px;padding:2px 7px;border-radius:20px;font-size:9px;border:1px solid;white-space:nowrap;flex-shrink:0}
+.pill.live{border-color:rgba(34,197,94,.4);background:rgba(34,197,94,.08);color:var(--green)}
+.pill.warn{border-color:rgba(245,158,11,.4);background:rgba(245,158,11,.08);color:var(--gold)}
+.pill.red{border-color:rgba(239,68,68,.4);background:rgba(239,68,68,.08);color:var(--red)}
+.dot{width:4px;height:4px;border-radius:50%;background:currentColor;animation:blink 1.4s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.top-search{flex:1;max-width:260px;margin-left:auto;display:flex;align-items:center;gap:5px;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);padding:0 8px;height:28px;flex-shrink:1;min-width:100px}
+.top-search input{background:none;border:none;outline:none;color:var(--text);font-size:11px;flex:1;min-width:0}
+.top-search input::placeholder{color:var(--text3)}
+.tbtn{background:none;border:1px solid var(--border2);border-radius:var(--r);color:var(--accent);padding:2px 7px;font-size:9px;cursor:pointer;transition:.15s;white-space:nowrap;flex-shrink:0}
+.tbtn:hover{background:rgba(56,189,248,.1)}
+.sidebar{background:var(--panel);border-right:1px solid var(--border);overflow-y:auto;display:flex;flex-direction:column}
+.s-section{border-bottom:1px solid var(--border)}
+.s-head{padding:7px 11px;font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:1px;font-weight:700}
+.layer-item{display:flex;align-items:center;gap:6px;padding:5px 11px;cursor:pointer;transition:background .1s}
+.layer-item:hover{background:rgba(56,189,248,.05)}
+.layer-item.on{background:rgba(56,189,248,.06)}
+.tog{width:24px;height:13px;border-radius:7px;border:1px solid var(--border2);background:var(--bg3);position:relative;flex-shrink:0;transition:.2s}
+.tog.on{background:var(--accent);border-color:var(--accent)}
+.tog::after{content:'';position:absolute;width:7px;height:7px;border-radius:50%;background:var(--text3);top:2px;left:2px;transition:.2s}
+.tog.on::after{background:#07101c;left:13px}
+.l-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.l-info{flex:1;min-width:0}
+.l-name{font-size:10px;color:var(--text);line-height:1.3}
+.l-src{font-size:8px;color:var(--text3)}
+.l-cnt{font-size:9px;padding:1px 4px;border-radius:3px;background:var(--bg3);color:var(--text3);flex-shrink:0}
+.l-cnt.hot{color:var(--red);background:rgba(239,68,68,.1)}
+.sidebar-footer{margin-top:auto;padding:8px 11px;border-top:1px solid var(--border)}
+.sidebar-footer a{color:var(--accent);text-decoration:none;font-size:8px}
+.mapwrap{position:relative;overflow:hidden;}
+#map{position:absolute;inset:0;}
+.map-status{position:absolute;bottom:0;left:0;right:0;background:rgba(7,12,20,.88);border-top:1px solid var(--border);padding:4px 10px;display:flex;gap:12px;flex-wrap:wrap;z-index:500}
+.ms{font-size:9px;color:var(--text3);display:flex;gap:3px;align-items:center}
+.ms span,.ms a{color:var(--accent);font-family:monospace;text-decoration:none;font-size:9px}
+.rpanel{background:var(--panel);border-left:1px solid var(--border);display:flex;flex-direction:column;overflow:hidden}
+.rtabs{display:flex;border-bottom:1px solid var(--border)}
+.rtab{flex:1;padding:6px 2px;font-size:9px;color:var(--text3);text-align:center;cursor:pointer;border-bottom:2px solid transparent;transition:.15s}
+.rtab.on{color:var(--accent);border-bottom-color:var(--accent)}
+.rpbody{flex:1;overflow-y:auto;display:flex;flex-direction:column}
+.tab-pane{display:none;flex-direction:column;flex:1}
+.tab-pane.on{display:flex}
+.ai-msgs{flex:1;overflow-y:auto;padding:8px;display:flex;flex-direction:column;gap:6px}
+.msg{padding:6px 8px;border-radius:6px;font-size:10px;line-height:1.6}
+.msg.user{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);color:var(--text);text-align:right}
+.msg.ai{background:var(--bg3);border:1px solid var(--border);color:var(--text2)}
+.msg.ai strong{color:var(--accent)}
+.ai-area{padding:7px;border-top:1px solid var(--border);display:flex;flex-direction:column;gap:4px}
+.quick-row{display:flex;gap:3px;flex-wrap:wrap}
+.qbtn{font-size:8px;padding:2px 5px;border-radius:3px;background:var(--bg3);border:1px solid var(--border);color:var(--text3);cursor:pointer;transition:.15s;white-space:nowrap}
+.qbtn:hover{border-color:var(--border2);color:var(--accent)}
+.ai-row{display:flex;gap:4px}
+.ai-row textarea{flex:1;background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);color:var(--text);font-size:10px;padding:5px;resize:none;height:48px;outline:none;transition:border .15s;font-family:var(--font)}
+.ai-row textarea:focus{border-color:var(--border2)}
+.send-btn{background:var(--accent);border:none;border-radius:var(--r);color:#07101c;font-weight:700;font-size:11px;padding:0 8px;cursor:pointer;flex-shrink:0}
+.typing{display:flex;gap:2px;padding:6px 8px;align-items:center}
+.typing span{width:4px;height:4px;border-radius:50%;background:var(--text3);animation:bounce 1.2s infinite}
+.typing span:nth-child(2){animation-delay:.2s}.typing span:nth-child(3){animation-delay:.4s}
+@keyframes bounce{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-4px)}}
+.feed-item{padding:8px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.feed-item:hover{background:rgba(56,189,248,.04)}
+.fi-head{display:flex;align-items:center;gap:4px;margin-bottom:2px}
+.fi-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.fi-src{font-size:8px;color:var(--text3)}.fi-time{font-size:8px;color:var(--text3);margin-left:auto}
+.fi-title{font-size:10px;color:var(--text);line-height:1.4}
+.fi-badge{display:inline-block;font-size:7px;padding:1px 4px;border-radius:2px;margin-top:2px;border:1px solid}
+.fi-badge.high{border-color:rgba(239,68,68,.5);color:var(--red);background:rgba(239,68,68,.08)}
+.fi-badge.med{border-color:rgba(245,158,11,.5);color:var(--gold);background:rgba(245,158,11,.08)}
+.fi-badge.low{border-color:rgba(34,197,94,.4);color:var(--green);background:rgba(34,197,94,.08)}
+.mvr-header{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mvr-header h3{font-size:10px;color:var(--accent);font-weight:600}
+.add-btn{background:var(--accent);color:#07101c;border:none;border-radius:4px;padding:2px 7px;font-size:9px;font-weight:600;cursor:pointer}
+.mvr-list{flex:1;overflow-y:auto}
+.mvr-item{padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+.mvr-item:hover{background:rgba(56,189,248,.04)}
+.mvr-item.active{background:rgba(56,189,248,.08);border-left:2px solid var(--accent)}
+.mvr-type{display:inline-block;font-size:7px;padding:1px 4px;border-radius:2px;font-weight:600;margin-bottom:2px}
+.mvr-type.crime{background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3)}
+.mvr-type.accident{background:rgba(245,158,11,.15);color:var(--gold);border:1px solid rgba(245,158,11,.3)}
+.mvr-type.fire{background:rgba(251,146,60,.15);color:var(--orange);border:1px solid rgba(251,146,60,.3)}
+.mvr-type.public{background:rgba(167,139,250,.15);color:var(--purple);border:1px solid rgba(167,139,250,.3)}
+.mvr-type.missing{background:rgba(34,197,94,.15);color:var(--green);border:1px solid rgba(34,197,94,.3)}
+.mvr-title{font-size:10px;color:var(--text);line-height:1.4;margin-bottom:1px}
+.mvr-loc{font-size:8px;color:var(--accent)}.mvr-time{font-size:8px;color:var(--text3)}
+.mvr-form{padding:8px 10px;border-top:1px solid var(--border);display:none;flex-direction:column;gap:5px}
+.mvr-form.show{display:flex}
+.form-row{display:flex;gap:4px}
+.f-inp{background:var(--bg3);border:1px solid var(--border);border-radius:4px;color:var(--text);font-size:10px;padding:4px 6px;outline:none;font-family:var(--font);transition:border .15s;width:100%}
+.f-inp:focus{border-color:var(--border2)}
+.f-inp.h{flex:1}
+select.f-inp{cursor:pointer}
+.f-inp.area{height:44px;resize:none}
+.form-btns{display:flex;gap:4px;justify-content:flex-end}
+.cancel-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--text3);padding:2px 7px;font-size:9px;cursor:pointer}
+.save-btn{background:var(--accent);border:none;border-radius:4px;color:#07101c;padding:2px 8px;font-size:9px;font-weight:600;cursor:pointer}
+.cams-wrap{padding:6px;display:flex;flex-direction:column;gap:5px}
+.cam-box{background:var(--bg3);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.cam-name{font-size:9px;color:var(--text2);padding:4px 7px;display:flex;align-items:center;gap:4px}
+.cam-badge{font-size:7px;padding:1px 4px;border-radius:2px;background:rgba(239,68,68,.2);color:var(--red);margin-left:auto}
+.cam-grid{display:grid;grid-template-columns:1fr 1fr;gap:3px;padding:0 7px 7px}
+.cam-link{font-size:8px;padding:3px 5px;border-radius:3px;border:1px solid var(--border);color:var(--accent);text-decoration:none;display:block;text-align:center;transition:.15s}
+.cam-link:hover{background:rgba(56,189,248,.08)}
+.leaflet-container{background:#0a1628!important}
+.leaflet-tile{filter:brightness(.82) saturate(.65) hue-rotate(195deg)}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+.ep{background:var(--panel)!important;border:1px solid var(--border2)!important;border-radius:8px!important;box-shadow:0 8px 32px rgba(0,0,0,.6)!important;min-width:180px}
+.ep .leaflet-popup-content-wrapper{background:transparent!important;box-shadow:none!important;padding:0!important}
+.ep .leaflet-popup-tip{background:var(--panel)!important}
+.ep .leaflet-popup-content{margin:0!important}
+.pi{padding:9px 11px}
+.pi strong{color:var(--accent);display:block;font-size:11px;margin-bottom:3px}
+.pi p{color:var(--text2);font-size:10px;line-height:1.5}
+.pi .pm{font-size:9px;color:var(--text3);margin-top:4px;padding-top:4px;border-top:1px solid var(--border)}
+.pt{font-size:8px;padding:1px 4px;border-radius:2px;font-weight:600;display:inline-block;margin-bottom:5px}
+</style>
+</head>
+<body>
+<div class="app">
+<header class="topbar">
+  <div class="logo-mark">IP</div>
+  <div><div class="logo-text">INTEL PRIME</div><div class="logo-sub">OSINT Command Center</div></div>
+  <div class="sep"></div>
+  <div class="pill live"><div class="dot"></div> Live</div>
+  <div class="pill warn"><div class="dot"></div> Hormuz: Elevated</div>
+  <div class="pill red"><div class="dot"></div> MVR: <span id="mvrCount">0</span></div>
+  <div class="top-search">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+    <input type="text" id="gSearch" placeholder="Search city, event…">
+  </div>
+  <button class="tbtn" onclick="window.open('https://flightradar24.com','_blank')">✈ FR24</button>
+  <button class="tbtn" onclick="window.open('https://marinetraffic.com','_blank')">⚓ AIS</button>
+  <button class="tbtn" onclick="window.open('https://zoom.earth','_blank')">🛰 SAT</button>
+  <button class="tbtn" onclick="window.open('https://windy.com','_blank')">🌊 Wind</button>
+  <span id="clk" style="font-size:9px;color:var(--text3);font-family:monospace;flex-shrink:0"></span>
+</header>
+<aside class="sidebar">
+  <div class="s-section">
+    <div class="s-head">Live layers</div>
+    <div class="layer-item on" data-layer="quakes" onclick="tgl(this)">
+      <div class="tog on" id="t-quakes"></div><div class="l-dot" style="background:#ef4444"></div>
+      <div class="l-info"><div class="l-name">Earthquakes</div><div class="l-src">USGS M2.5+ / 24h</div></div>
+      <div class="l-cnt" id="c-quakes">…</div>
+    </div>
+    <div class="layer-item on" data-layer="fires" onclick="tgl(this)">
+      <div class="tog on" id="t-fires"></div><div class="l-dot" style="background:#fb923c"></div>
+      <div class="l-info"><div class="l-name">Active fires</div><div class="l-src">NASA FIRMS / 24h</div></div>
+      <div class="l-cnt" id="c-fires">…</div>
+    </div>
+    <div class="layer-item on" data-layer="mvr" onclick="tgl(this)">
+      <div class="tog on" id="t-mvr"></div><div class="l-dot" style="background:#a78bfa"></div>
+      <div class="l-info"><div class="l-name">MVR Bilten MK</div><div class="l-src">Manual live entries</div></div>
+      <div class="l-cnt hot" id="c-mvr">LIVE</div>
+    </div>
+  </div>
+  <div class="s-section">
+    <div class="s-head">Open-source (external)</div>
+    <div class="layer-item" onclick="window.open('https://flightradar24.com','_blank')">
+      <div class="l-dot" style="background:#38bdf8"></div>
+      <div class="l-info"><div class="l-name">Live flights ↗</div><div class="l-src">FlightRadar24.com</div></div>
+      <div class="l-cnt">ext</div>
+    </div>
+    <div class="layer-item" onclick="window.open('https://marinetraffic.com','_blank')">
+      <div class="l-dot" style="background:#22c55e"></div>
+      <div class="l-info"><div class="l-name">Ship traffic ↗</div><div class="l-src">MarineTraffic AIS</div></div>
+      <div class="l-cnt">ext</div>
+    </div>
+    <div class="layer-item" onclick="window.open('https://zoom.earth','_blank')">
+      <div class="l-dot" style="background:#67e8f9"></div>
+      <div class="l-info"><div class="l-name">Satellite imagery ↗</div><div class="l-src">Zoom.Earth</div></div>
+      <div class="l-cnt">ext</div>
+    </div>
+    <div class="layer-item" onclick="window.open('https://windy.com','_blank')">
+      <div class="l-dot" style="background:#a78bfa"></div>
+      <div class="l-info"><div class="l-name">Wind & storms ↗</div><div class="l-src">Windy.com</div></div>
+      <div class="l-cnt">ext</div>
+    </div>
+    <div class="layer-item" onclick="window.open('https://lightningmaps.org','_blank')">
+      <div class="l-dot" style="background:#e879f9"></div>
+      <div class="l-info"><div class="l-name">Lightning ↗</div><div class="l-src">LightningMaps.org</div></div>
+      <div class="l-cnt">ext</div>
+    </div>
+    <div class="layer-item" onclick="window.open('https://www.n2yo.com','_blank')">
+      <div class="l-dot" style="background:#f59e0b"></div>
+      <div class="l-info"><div class="l-name">Satellites ↗</div><div class="l-src">N2YO.com</div></div>
+      <div class="l-cnt">ext</div>
+    </div>
+    <div class="layer-item" onclick="window.open('https://submarinecablemap.com','_blank')">
+      <div class="l-dot" style="background:#67e8f9"></div>
+      <div class="l-info"><div class="l-name">Sub cables ↗</div><div class="l-src">SubmarineCableMap</div></div>
+      <div class="l-cnt">ext</div>
+    </div>
+  </div>
+  <div class="s-section">
+    <div class="s-head">Intel alerts</div>
+    <div class="layer-item" onclick="askAI('Current status Strait of Hormuz and Persian Gulf military activity September 2026')">
+      <div class="l-dot" style="background:#ef4444"></div>
+      <div class="l-info"><div class="l-name">Hormuz watch</div><div class="l-src">Click → AI analysis</div></div>
+      <div class="l-cnt hot">HOT</div>
+    </div>
+  </div>
+  <div class="sidebar-footer">
+    <a href="https://earthquake.usgs.gov" target="_blank">USGS</a> ·
+    <a href="https://firms.modaps.eosdis.nasa.gov" target="_blank">FIRMS</a> ·
+    <a href="https://zoom.earth" target="_blank">Zoom.Earth</a>
+  </div>
+</aside>
+<div class="mapwrap">
+  <div id="map"></div>
+  <div class="map-status">
+    <div class="ms">LAT <span id="latV">—</span></div>
+    <div class="ms">LON <span id="lonV">—</span></div>
+    <div class="ms">ZOOM <span id="zoomV">5×</span></div>
+    <div class="ms">Layers <span id="layerCount">3</span></div>
+    <div class="ms" style="margin-left:auto"><a href="https://earthquake.usgs.gov/earthquakes/map/" target="_blank">↗ USGS live</a></div>
+    <div class="ms"><a href="https://firms.modaps.eosdis.nasa.gov/map/" target="_blank">↗ FIRMS map</a></div>
+  </div>
+</div>
+<aside class="rpanel">
+  <div class="rtabs">
+    <div class="rtab on" onclick="swTab('ai',this)">AI Intel</div>
+    <div class="rtab" onclick="swTab('mvr',this)">MVR</div>
+    <div class="rtab" onclick="swTab('feeds',this)">Feeds</div>
+    <div class="rtab" onclick="swTab('cams',this)">Cams</div>
+  </div>
+  <div class="rpbody">
+    <div class="tab-pane on" id="tab-ai">
+      <div class="ai-msgs" id="aiMsgs">
+        <div class="msg ai"><strong>Intel Prime AI · Ready</strong>Кликни на маркер за анализа или користи брзи прашања. Слоеви: USGS земјотреси, NASA FIRMS пожари, MVR Билтен Македонија.</div>
+      </div>
+      <div class="ai-area">
+        <div class="quick-row">
+          <button class="qbtn" onclick="askAI('Current status Strait of Hormuz and military activity Persian Gulf September 2026')">Hormuz</button>
+          <button class="qbtn" onclick="askAI('Analyze most significant earthquakes last 24h and geopolitical context')">Seismic</button>
+          <button class="qbtn" onclick="askAI('Active fires detected NASA FIRMS - which could indicate military or conflict activity?')">FIRMS</button>
+          <button class="qbtn" onclick="askAI('Current security situation Macedonia and Western Balkans September 2026')">Balkans</button>
+          <button class="qbtn" onclick="askAI('Submarine cable threats Red Sea and Mediterranean current situation')">Cables</button>
+        </div>
+        <div class="ai-row">
+          <textarea id="aiIn" placeholder="Ask Intel Prime AI… (Enter)"></textarea>
+          <button class="send-btn" onclick="sendAI()">↑</button>
+        </div>
+      </div>
+    </div>
+    <div class="tab-pane" id="tab-mvr">
+      <div class="mvr-header">
+        <h3>📋 MVR Bilten — Live</h3>
+        <button class="add-btn" onclick="tglForm()">+ Додај</button>
+      </div>
+      <div class="mvr-form" id="mvrForm">
+        <input class="f-inp" id="fTitle" placeholder="Наслов на настанот">
+        <div class="form-row">
+          <input class="f-inp h" id="fLoc" placeholder="Локација / адреса">
+          <select class="f-inp h" id="fType">
+            <option value="crime">🔴 Crime</option>
+            <option value="accident">🟡 Accident</option>
+            <option value="fire">🟠 Fire</option>
+            <option value="public">🟣 Public order</option>
+            <option value="missing">🟢 Missing</option>
+          </select>
+        </div>
+        <div class="form-row">
+          <input class="f-inp h" id="fLat" placeholder="Latitude (41.99)">
+          <input class="f-inp h" id="fLon" placeholder="Longitude (21.43)">
+        </div>
+        <textarea class="f-inp area" id="fDesc" placeholder="Детали / белешки…"></textarea>
+        <div class="form-btns">
+          <button class="cancel-btn" onclick="tglForm()">Откажи</button>
+          <button class="save-btn" onclick="saveEv()">Зачувај & Прикажи</button>
+        </div>
+      </div>
+      <div class="mvr-list" id="mvrList"></div>
+    </div>
+    <div class="tab-pane" id="tab-feeds">
+      <div style="flex:1;overflow-y:auto" id="feedsList"></div>
+    </div>
+    <div class="tab-pane" id="tab-cams">
+      <div class="cams-wrap">
+        <div class="cam-box">
+          <div class="cam-name">🌍 Chokepoints <span class="cam-badge">LIVE</span></div>
+          <div class="cam-grid">
+            <a class="cam-link" href="https://www.skylinewebcams.com/en/webcam/turchia/istanbul/istanbul/bosphorus-bridge.html" target="_blank">Bosphorus</a>
+            <a class="cam-link" href="https://www.earthcam.com" target="_blank">EarthCam</a>
+            <a class="cam-link" href="https://www.skylinewebcams.com" target="_blank">SkylineWebcams</a>
+            <a class="cam-link" href="https://worldcam.eu" target="_blank">WorldCam.eu</a>
+          </div>
+        </div>
+        <div class="cam-box">
+          <div class="cam-name">🔥 Fire watch <span class="cam-badge">LIVE</span></div>
+          <div class="cam-grid">
+            <a class="cam-link" href="https://www.alertwildfire.org" target="_blank">AlertWildfire</a>
+            <a class="cam-link" href="https://firms.modaps.eosdis.nasa.gov/map/" target="_blank">NASA FIRMS</a>
+            <a class="cam-link" href="https://globalforestwatch.org/map/" target="_blank">Forest Watch</a>
+            <a class="cam-link" href="https://www.windy.com/webcams" target="_blank">Windy Cams</a>
+          </div>
+        </div>
+        <div class="cam-box">
+          <div class="cam-name">📷 Public IP cams</div>
+          <div class="cam-grid">
+            <a class="cam-link" href="https://www.insecam.org" target="_blank">Insecam.org</a>
+            <a class="cam-link" href="https://www.webcamtaxi.com" target="_blank">WebcamTaxi</a>
+            <a class="cam-link" href="https://explore.org/livecams" target="_blank">Explore.org</a>
+            <a class="cam-link" href="https://www.earthcam.com" target="_blank">EarthCam</a>
+          </div>
+        </div>
+        <div class="cam-box">
+          <div class="cam-name">🇲🇰 Македонија / Балкани</div>
+          <div class="cam-grid">
+            <a class="cam-link" href="https://www.skylinewebcams.com/en/webcam/makedonija.html" target="_blank">MK cams</a>
+            <a class="cam-link" href="https://www.webcamtaxi.com/en/north-macedonia.html" target="_blank">MK taxi</a>
+            <a class="cam-link" href="https://www.skylinewebcams.com/en/webcam/srbija.html" target="_blank">Serbia</a>
+            <a class="cam-link" href="https://www.skylinewebcams.com/en/webcam/albanija.html" target="_blank">Albania</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
+</div>
+<script>
+const API='https://api.anthropic.com/v1/messages';
+const ACTIVE=new Set(['quakes','fires','mvr']);
+let map,qL,fL,mL,aiHist=[],mvrEvs=[];
+const MC={crime:'#ef4444',accident:'#f59e0b',fire:'#fb923c',public:'#a78bfa',missing:'#22c55e'};
+const MI={crime:'🔴',accident:'🟡',fire:'🟠',public:'🟣',missing:'🟢'};
+const DEMO=[
+  {id:1,title:'Сообраќајна несреќа А1',type:'accident',loc:'Велес, Автопат А1',lat:41.715,lon:21.775,desc:'Судир патнички возила. Сообраќај успорен.',time:'2026-09-22 08:42'},
+  {id:2,title:'Шумски пожар Бигла',type:'fire',loc:'Кичево, Бигла',lat:41.51,lon:20.96,desc:'Активен шумски пожар. МВР и Пожарна ангажирани.',time:'2026-09-22 11:15'},
+  {id:3,title:'Вооружена кражба',type:'crime',loc:'Скопје, Аеродром',lat:41.98,lon:21.48,desc:'Вооружена кражба во продавница. Осомничен во бегство.',time:'2026-09-22 14:30'},
+  {id:4,title:'Нарушување на јавен ред',type:'public',loc:'Тетово, Центар',lat:41.995,lon:20.97,desc:'Незаконски собир. МВР единици ангажирани.',time:'2026-09-22 16:00'},
+  {id:5,title:'Исчезнато лице 67г',type:'missing',loc:'Битола',lat:41.03,lon:21.33,desc:'Машко 67г. Активна потрага.',time:'2026-09-22 09:10'},
+  {id:6,title:'Сообраќајна несреќа М4',type:'accident',loc:'Охрид, М4',lat:41.12,lon:20.80,desc:'Судир на влезот во Охрид. Линешка на лице место.',time:'2026-09-22 13:20'},
+  {id:7,title:'Пожар во станбена зграда',type:'fire',loc:'Куманово, Центар',lat:42.13,lon:21.72,desc:'Пожар на 3-ти кат. Евакуација во тек.',time:'2026-09-22 17:45'},
+];
+
+function initMap(){
+  window._m=map=L.map('map',{center:[41.99,21.43],zoom:7,zoomControl:true});
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:18,opacity:.9}).addTo(map);
+  try{L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',{attribution:'© Stadia',maxZoom:18,opacity:.6}).addTo(map);}catch(e){}
+  qL=L.layerGroup().addTo(map);
+  fL=L.layerGroup().addTo(map);
+  mL=L.layerGroup().addTo(map);
+  map.on('mousemove',e=>{document.getElementById('latV').textContent=e.latlng.lat.toFixed(4)+'°';document.getElementById('lonV').textContent=e.latlng.lng.toFixed(4)+'°';});
+  map.on('zoom',()=>document.getElementById('zoomV').textContent=map.getZoom()+'×');
+  loadQ(); loadF(); initMvr();
+}
+
+async function loadQ(){
+  setC('quakes','…');
+  try{
+    const d=await fetch('https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/2.5_day.geojson').then(r=>r.json());
+    qL.clearLayers();
+    d.features.forEach(f=>{
+      const[lon,lat,dep]=f.geometry.coordinates,mag=f.properties.mag,place=f.properties.place;
+      const col=mag>=5?'#ef4444':mag>=4?'#f59e0b':'#38bdf8';
+      const sz=Math.max(5,mag*4.5);
+      const m=L.circleMarker([lat,lon],{radius:sz,fillColor:col,color:col,weight:1,opacity:.9,fillOpacity:.5});
+      m.bindPopup(mkP('QUAKE',`M${mag} — ${place}`,`Depth: ${Math.round(dep)}km`,mag>=5?'high':mag>=4?'med':'low',col),{className:'ep'});
+      m.on('click',()=>askAI(`Analyze earthquake M${mag} at ${place}, depth ${Math.round(dep)}km. Geopolitical significance?`));
+      qL.addLayer(m);
+    });
+    setC('quakes',d.features.length);
+  }catch(e){setC('quakes','err');}
+}
+
+async function loadF(){
+  setC('fires','…');
+  try{
+    // FIRMS MODIS 24h world data
+    const url='https://firms.modaps.eosdis.nasa.gov/data/active_fire/modis-c6.1/csv/MODIS_C6_1_Global_24h.csv';
+    const txt=await fetch(url).then(r=>{if(!r.ok)throw new Error();return r.text();});
+    const rows=txt.trim().split('\n').slice(1);
+    fL.clearLayers();let n=0;
+    rows.forEach(row=>{
+      const c=row.split(',');
+      if(c.length<4)return;
+      const lat=parseFloat(c[0]),lon=parseFloat(c[1]),br=parseFloat(c[2]);
+      if(isNaN(lat)||isNaN(lon))return;
+      // Balkans+MidEast+Ukraine region
+      if(!((lat>35&&lat<50&&lon>13&&lon<46)||(lat>20&&lat<40&&lon>25&&lon<65)||(lat>44&&lat<55&&lon>22&&lon<42)))return;
+      const col=br>350?'#ef4444':br>330?'#fb923c':'#f59e0b';
+      const m=L.circleMarker([lat,lon],{radius:4,fillColor:col,color:'#ff6b00',weight:1,opacity:1,fillOpacity:.75});
+      m.bindPopup(mkP('FIRE',`🔥 Active fire — ${c[5]||''}`,`Brightness: ${Math.round(br)}K | ${lat.toFixed(2)},${lon.toFixed(2)}`,'med','#fb923c'),{className:'ep'});
+      m.on('click',()=>askAI(`Fire at ${lat.toFixed(2)},${lon.toFixed(2)} brightness ${Math.round(br)}K. What is the significance?`));
+      fL.addLayer(m);n++;
+    });
+    setC('fires',n);
+  }catch(e){setC('fires','0 (CORS)');console.warn('FIRMS',e);}
+}
+
+function initMvr(){
+  const saved=localStorage.getItem('mvrEvs');
+  mvrEvs=saved?JSON.parse(saved):JSON.parse(JSON.stringify(DEMO));
+  renderMvr();
+}
+function saveMvr(){localStorage.setItem('mvrEvs',JSON.stringify(mvrEvs));document.getElementById('mvrCount').textContent=mvrEvs.length;setC('mvr',mvrEvs.length);}
+function renderMvr(){
+  mL.clearLayers();
+  const list=document.getElementById('mvrList');list.innerHTML='';
+  mvrEvs.slice().reverse().forEach(ev=>{
+    const col=MC[ev.type]||'#94a3b8',ic=MI[ev.type]||'⚪';
+    const mk=L.circleMarker([ev.lat,ev.lon],{radius:9,fillColor:col,color:'#fff',weight:1.5,opacity:1,fillOpacity:.88});
+    mk.bindPopup(mkP(ev.type.toUpperCase(),`${ic} ${ev.title}`,`${ev.loc}<br>${ev.desc||''}`,ev.type==='crime'||ev.type==='fire'?'high':'med',col),{className:'ep'});
+    mk.on('click',()=>{askAI(`MVR event: "${ev.title}" at ${ev.loc}. Type: ${ev.type}. ${ev.desc||''}. Security significance and recommended response?`);swTab('ai',null);document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('on',i===0));});
+    mL.addLayer(mk);
+    const div=document.createElement('div');
+    div.className='mvr-item';div.id='mi-'+ev.id;
+    div.innerHTML=`<div><span class="mvr-type ${ev.type}">${ic} ${ev.type.toUpperCase()}</span></div><div class="mvr-title">${ev.title}</div><div style="display:flex;justify-content:space-between;margin-top:2px"><span class="mvr-loc">📍 ${ev.loc}</span><span class="mvr-time">${ev.time.slice(11,16)}</span></div>`;
+    div.onclick=()=>{map.setView([ev.lat,ev.lon],13);mk.openPopup();document.querySelectorAll('.mvr-item').forEach(el=>el.classList.remove('active'));div.classList.add('active');};
+    list.appendChild(div);
+  });
+  saveMvr();
+}
+function tglForm(){document.getElementById('mvrForm').classList.toggle('show');}
+function saveEv(){
+  const t=document.getElementById('fTitle').value.trim();if(!t)return;
+  const ev={id:Date.now(),title:t,type:document.getElementById('fType').value,loc:document.getElementById('fLoc').value||'Unknown',lat:parseFloat(document.getElementById('fLat').value)||41.99,lon:parseFloat(document.getElementById('fLon').value)||21.43,desc:document.getElementById('fDesc').value,time:new Date().toISOString().slice(0,16).replace('T',' ')};
+  ['fTitle','fLoc','fLat','fLon','fDesc'].forEach(id=>document.getElementById(id).value='');
+  mvrEvs.push(ev);tglForm();renderMvr();map.setView([ev.lat,ev.lon],13);
+}
+
+function tgl(el){
+  const id=el.dataset.layer,t=document.getElementById('t-'+id);
+  if(ACTIVE.has(id)){ACTIVE.delete(id);el.classList.remove('on');t.classList.remove('on');if(id==='quakes')map.removeLayer(qL);if(id==='fires')map.removeLayer(fL);if(id==='mvr')map.removeLayer(mL);}
+  else{ACTIVE.add(id);el.classList.add('on');t.classList.add('on');if(id==='quakes'){map.addLayer(qL);loadQ();}if(id==='fires'){map.addLayer(fL);loadF();}if(id==='mvr')map.addLayer(mL);}
+  document.getElementById('layerCount').textContent=ACTIVE.size;
+}
+function setC(id,v){const e=document.getElementById('c-'+id);if(e)e.textContent=v;}
+function mkP(type,title,body,risk,col){
+  const rc={high:'var(--red)',med:'var(--gold)',low:'var(--green)'};
+  return `<div class="pi"><span class="pt" style="background:${col}22;color:${col};border:1px solid ${col}44">${type}</span><strong>${title}</strong><p>${body}</p><div class="pm">Risk: <span style="color:${rc[risk]||'var(--text3)'}">${risk?.toUpperCase()}</span> · Click → AI</div></div>`;
+}
+
+async function sendAI(){
+  const inp=document.getElementById('aiIn'),msg=inp.value.trim();if(!msg)return;
+  addMsg(msg,'user');inp.value='';const ty=addTyp();
+  const sys='You are Intel Prime AI, OSINT analyst for Macedonia and Western Balkans. Analyze geopolitical events, MVR security incidents, seismic activity, fires, military movements. Be concise, intelligence-community style. Confidence levels. Sep 2026. US-Iran war, Hormuz elevated.';
+  try{
+    const r=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:500,system:sys,messages:[...aiHist,{role:'user',content:msg}]})});
+    const d=await r.json();const rep=d.content?.[0]?.text||'[No response]';
+    aiHist.push({role:'user',content:msg},{role:'assistant',content:rep});
+    if(aiHist.length>12)aiHist=aiHist.slice(-10);
+    rmTyp(ty);addMsg(rep,'ai');
+  }catch(e){rmTyp(ty);addMsg('API error: '+e.message,'ai');}
+}
+function askAI(q){document.getElementById('aiIn').value=q;sendAI();}
+function addMsg(t,r){const d=document.createElement('div');d.className='msg '+r;d.textContent=t;const c=document.getElementById('aiMsgs');c.appendChild(d);c.scrollTop=c.scrollHeight;return d;}
+function addTyp(){const d=document.createElement('div');d.className='typing';d.innerHTML='<span></span><span></span><span></span>';const c=document.getElementById('aiMsgs');c.appendChild(d);c.scrollTop=c.scrollHeight;return d;}
+function rmTyp(el){el.remove();}
+document.getElementById('aiIn').addEventListener('keydown',e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendAI();}});
+
+const FEEDS=[
+  {color:'#ef4444',src:'JMIC',time:'14:22',title:'Hormuz: US 5th Fleet escorts resumed after IRGC warning shot — Level 3',risk:'high'},
+  {color:'#f59e0b',src:'ADS-B',time:'14:18',title:'RC-135V Rivet Joint eastern Med — SIGINT collection pattern',risk:'med'},
+  {color:'#fb923c',src:'NASA FIRMS',time:'14:05',title:'New fire cluster NW Ukraine — thermal consistent with artillery',risk:'high'},
+  {color:'#22c55e',src:'MarineTraffic',time:'13:50',title:'6 VLCC tankers Hormuz northbound — war risk insurance active',risk:'low'},
+  {color:'#a78bfa',src:'USGS',time:'13:40',title:'M4.7 Iran/Turkey border — no tsunami warning',risk:'med'},
+  {color:'#67e8f9',src:'SubCableMap',time:'13:20',title:'SEA-ME-WE 5 Red Sea — elevated threat OSINT community',risk:'med'},
+];
+document.getElementById('feedsList').innerHTML=FEEDS.map(f=>`<div class="feed-item" onclick="askAI('Analyze: ${f.title.replace(/'/g,"\\'")}')"><div class="fi-head"><div class="fi-dot" style="background:${f.color}"></div><span class="fi-src">${f.src}</span><span class="fi-time">${f.time} UTC</span></div><div class="fi-title">${f.title}</div><span class="fi-badge ${f.risk}">${f.risk.toUpperCase()}</span></div>`).join('');
+
+function swTab(id,el){document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('on'));document.getElementById('tab-'+id).classList.add('on');if(el)document.querySelectorAll('.rtab').forEach(t=>t.classList.toggle('on',t===el));}
+
+document.getElementById('gSearch').addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    const q=e.target.value.trim();if(!q)return;
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=1`).then(r=>r.json()).then(d=>{if(d[0])map.setView([d[0].lat,d[0].lon],11);});
+    askAI('OSINT for location: '+q);swTab('ai',null);document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('on',i===0));
+  }
+});
+
+function tick(){document.getElementById('clk').textContent=new Date().toISOString().slice(11,19)+' UTC';}
+setInterval(tick,1000);tick();
+setInterval(()=>{if(ACTIVE.has('quakes'))loadQ();if(ACTIVE.has('fires'))loadF();},5*60*1000);
+initMap();setTimeout(()=>{try{window._m.invalidateSize();}catch(e){}},800);
+</script>
+</body>
+</html>
