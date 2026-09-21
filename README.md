@@ -14,6 +14,8 @@ It also links the latest ten official MVR daily bulletins and can show their pub
 
 The Macedonia panel also includes a fixed public-centroid layer for the City of Skopje municipalities and surrounding municipalities: Центар, Аеродром, Карпош, Кисела Вода, Чаир, Бутел, Гази Баба, Ѓорче Петров, Шуто Оризари, Сарај, Чучер-Сандево, Арачиново, Илинден, Петровец, Зелениково, Сопиште, Студеничани, and Велес. Its important-news aggregator queries GDELT for Macedonia/Skopje coverage on first load and every five minutes.
 
+Selecting **Show bulletin areas on map** also adds the latest parsed MVR event summaries to **Live feeds**, with the public location, date, short text, and official bulletin link. Sensitive personal details are excluded while publicly named streets, squares, airports, and routes remain visible.
+
 ## Run (static, no Node required)
 
 Open `index.html` directly, or publish the repository with GitHub Pages, Netlify, Cloudflare Pages, or another static host. Map, evidence capture, IndexedDB persistence, timeline, and JSON backup/restore work without Node.
