@@ -1,717 +1,81 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Intel Prime — OSINT Command Center</title>
-<style>
-:root {
-  --bg: #070c14;
-  --bg2: #0d1520;
-  --bg3: #111d2e;
-  --panel: #0f1a28;
-  --border: rgba(56,189,248,0.12);
-  --border2: rgba(56,189,248,0.25);
-  --accent: #38bdf8;
-  --accent2: #0ea5e9;
-  --gold: #f59e0b;
-  --red: #ef4444;
-  --green: #22c55e;
-  --purple: #a78bfa;
-  --orange: #fb923c;
-  --pink: #ec4899;
-  --text: #e2e8f0;
-  --text2: #94a3b8;
-  --text3: #64748b;
-  --radius: 8px;
-  --font: 'Inter', system-ui, sans-serif;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html, body { height: 100%; background: var(--bg); color: var(--text); font-family: var(--font); overflow: hidden; }
-
-/* LAYOUT */
-.app { display: grid; grid-template-rows: 48px 1fr; grid-template-columns: 220px 1fr 300px; height: 100vh; }
-.topbar { grid-column: 1 / -1; background: var(--bg2); border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 12px; padding: 0 16px; z-index: 100; }
-.sidebar { background: var(--panel); border-right: 1px solid var(--border); overflow-y: auto; display: flex; flex-direction: column; }
-.main { position: relative; overflow: hidden; background: var(--bg); }
-.rightpanel { background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-
-/* TOPBAR */
-.logo { display: flex; align-items: center; gap: 8px; }
-.logo-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: #07101c; letter-spacing: -0.5px; flex-shrink: 0; }
-.logo-text { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: 0.5px; }
-.logo-sub { font-size: 10px; color: var(--text3); font-weight: 400; }
-.topbar-sep { width: 1px; height: 24px; background: var(--border); }
-.status-pills { display: flex; gap: 6px; }
-.pill { display: flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 20px; font-size: 10px; border: 1px solid; }
-.pill.live { border-color: rgba(34,197,94,0.4); background: rgba(34,197,94,0.08); color: var(--green); }
-.pill.warn { border-color: rgba(245,158,11,0.4); background: rgba(245,158,11,0.08); color: var(--gold); }
-.pulse { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: blink 1.4s infinite; }
-@keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-.topbar-search { flex: 1; max-width: 340px; display: flex; align-items: center; gap: 6px; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); padding: 0 10px; height: 32px; margin-left: auto; }
-.topbar-search input { background: none; border: none; outline: none; color: var(--text); font-size: 12px; flex: 1; }
-.topbar-search input::placeholder { color: var(--text3); }
-.topbar-actions { display: flex; gap: 6px; }
-.tbtn { background: none; border: 1px solid var(--border2); border-radius: var(--radius); color: var(--accent); padding: 4px 10px; font-size: 11px; cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.tbtn:hover { background: rgba(56,189,248,0.1); }
-.tbtn.active { background: var(--accent); color: #07101c; border-color: var(--accent); font-weight: 600; }
-
-/* SIDEBAR */
-.sidebar-section { border-bottom: 1px solid var(--border); }
-.sidebar-head { padding: 10px 14px; font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
-.layer-item { display: flex; align-items: center; gap: 8px; padding: 7px 14px; cursor: pointer; transition: background 0.1s; }
-.layer-item:hover { background: rgba(56,189,248,0.06); }
-.layer-item.on { background: rgba(56,189,248,0.06); }
-.toggle { width: 28px; height: 15px; border-radius: 8px; border: 1px solid var(--border2); background: var(--bg3); position: relative; flex-shrink: 0; transition: all 0.2s; cursor: pointer; }
-.toggle.on { background: var(--accent); border-color: var(--accent); }
-.toggle::after { content: ''; position: absolute; width: 9px; height: 9px; border-radius: 50%; background: var(--text3); top: 2px; left: 2px; transition: all 0.2s; }
-.toggle.on::after { background: #07101c; left: 15px; }
-.layer-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
-.layer-info { flex: 1; min-width: 0; }
-.layer-name { font-size: 11px; color: var(--text); line-height: 1.3; }
-.layer-src { font-size: 9px; color: var(--text3); }
-.layer-count { font-size: 10px; padding: 1px 5px; border-radius: 4px; background: var(--bg3); color: var(--text3); flex-shrink: 0; }
-.sidebar-footer { margin-top: auto; padding: 12px 14px; border-top: 1px solid var(--border); }
-.sidebar-footer p { font-size: 10px; color: var(--text3); line-height: 1.8; }
-.sidebar-footer a { color: var(--accent); text-decoration: none; font-size: 10px; }
-
-/* MAIN CANVAS */
-#canvas { width: 100%; height: 100%; display: block; cursor: crosshair; }
-.map-overlay { position: absolute; inset: 0; pointer-events: none; }
-.crosshair { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); width: 24px; height: 24px; pointer-events: none; opacity: 0.4; }
-.crosshair::before, .crosshair::after { content: ''; position: absolute; background: var(--accent); }
-.crosshair::before { width: 1px; height: 100%; top: 0; left: 50%; transform: translateX(-50%); }
-.crosshair::after { height: 1px; width: 100%; top: 50%; left: 0; transform: translateY(-50%); }
-.coords-bar { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(7,12,20,0.9); backdrop-filter: blur(4px); padding: 6px 14px; display: flex; gap: 16px; border-top: 1px solid var(--border); flex-wrap: wrap; }
-.coord-item { font-size: 10px; color: var(--text3); display: flex; gap: 4px; align-items: center; }
-.coord-item span { color: var(--accent); font-family: monospace; }
-.tooltip-box { position: absolute; background: rgba(7,12,20,0.97); border: 1px solid var(--border2); border-radius: 10px; padding: 10px 13px; font-size: 11px; pointer-events: none; display: none; max-width: 220px; z-index: 50; box-shadow: 0 8px 32px rgba(0,0,0,0.6); }
-.tooltip-box strong { color: var(--accent); display: block; margin-bottom: 4px; font-size: 12px; }
-.tooltip-box p { color: var(--text2); line-height: 1.5; }
-.tooltip-box .t-meta { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--border); font-size: 10px; color: var(--text3); }
-
-/* RIGHT PANEL */
-.rpanel-tabs { display: flex; border-bottom: 1px solid var(--border); }
-.rtab { flex: 1; padding: 8px 4px; font-size: 11px; color: var(--text3); text-align: center; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; }
-.rtab.active { color: var(--accent); border-bottom-color: var(--accent); }
-.rpanel-body { flex: 1; overflow-y: auto; display: flex; flex-direction: column; }
-.tab-pane { display: none; flex-direction: column; flex: 1; }
-.tab-pane.active { display: flex; }
-
-/* AI PANEL */
-.ai-messages { flex: 1; overflow-y: auto; padding: 12px; display: flex; flex-direction: column; gap: 8px; }
-.msg { padding: 8px 10px; border-radius: 8px; font-size: 12px; line-height: 1.6; }
-.msg.user { background: rgba(56,189,248,0.1); border: 1px solid rgba(56,189,248,0.2); color: var(--text); text-align: right; }
-.msg.ai { background: var(--bg3); border: 1px solid var(--border); color: var(--text2); }
-.msg.ai strong { color: var(--accent); }
-.ai-input-area { padding: 10px; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: 6px; }
-.ai-quick { display: flex; gap: 4px; flex-wrap: wrap; }
-.quick-btn { font-size: 10px; padding: 3px 7px; border-radius: 5px; background: var(--bg3); border: 1px solid var(--border); color: var(--text3); cursor: pointer; transition: all 0.15s; white-space: nowrap; }
-.quick-btn:hover { border-color: var(--border2); color: var(--accent); }
-.ai-row { display: flex; gap: 6px; }
-.ai-row textarea { flex: 1; background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text); font-size: 12px; padding: 8px; resize: none; height: 60px; outline: none; transition: border 0.15s; font-family: var(--font); }
-.ai-row textarea:focus { border-color: var(--border2); }
-.send-btn { background: var(--accent); border: none; border-radius: var(--radius); color: #07101c; font-weight: 600; font-size: 12px; padding: 0 12px; cursor: pointer; transition: background 0.15s; flex-shrink: 0; }
-.send-btn:hover { background: var(--accent2); }
-.typing { display: flex; gap: 3px; padding: 8px 10px; align-items: center; }
-.typing span { width: 5px; height: 5px; border-radius: 50%; background: var(--text3); animation: bounce 1.2s infinite; }
-.typing span:nth-child(2) { animation-delay: 0.2s; }
-.typing span:nth-child(3) { animation-delay: 0.4s; }
-@keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-5px)} }
-
-/* FEEDS PANEL */
-.feed-item { padding: 10px 14px; border-bottom: 1px solid var(--border); cursor: pointer; transition: background 0.1s; }
-.feed-item:hover { background: rgba(56,189,248,0.04); }
-.feed-item .fi-head { display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
-.fi-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-.fi-src { font-size: 10px; color: var(--text3); }
-.fi-time { font-size: 10px; color: var(--text3); margin-left: auto; }
-.fi-title { font-size: 12px; color: var(--text); line-height: 1.4; }
-.fi-badge { display: inline-block; font-size: 9px; padding: 1px 5px; border-radius: 3px; margin-top: 4px; border: 1px solid; }
-.fi-badge.high { border-color: rgba(239,68,68,0.5); color: var(--red); background: rgba(239,68,68,0.08); }
-.fi-badge.med { border-color: rgba(245,158,11,0.5); color: var(--gold); background: rgba(245,158,11,0.08); }
-.fi-badge.low { border-color: rgba(34,197,94,0.4); color: var(--green); background: rgba(34,197,94,0.08); }
-
-/* CAMS PANEL */
-.cams-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; padding: 10px; }
-.cam-cell { background: var(--bg3); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; cursor: pointer; transition: border-color 0.15s; }
-.cam-cell:hover { border-color: var(--border2); }
-.cam-thumb { aspect-ratio: 16/9; background: #060e18; display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden; }
-.cam-thumb canvas { width: 100%; height: 100%; }
-.cam-live { position: absolute; top: 4px; left: 4px; font-size: 8px; padding: 1px 5px; border-radius: 3px; background: rgba(239,68,68,0.9); color: #fff; font-weight: 600; letter-spacing: 0.5px; }
-.cam-name { font-size: 10px; color: var(--text2); padding: 5px 6px; }
-.cam-loc { font-size: 9px; color: var(--text3); padding: 0 6px 5px; }
-.cam-links { padding: 8px 10px; border-top: 1px solid var(--border); }
-.cam-links p { font-size: 10px; color: var(--text3); margin-bottom: 6px; }
-.cam-link-btn { display: block; padding: 5px 8px; margin-bottom: 4px; border-radius: 5px; border: 1px solid var(--border); font-size: 11px; color: var(--accent); text-decoration: none; transition: all 0.15s; }
-.cam-link-btn:hover { background: rgba(56,189,248,0.08); border-color: var(--border2); }
-
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-/* ALERT BANNER */
-.alert-banner { position: absolute; top: 8px; left: 50%; transform: translateX(-50%); background: rgba(239,68,68,0.15); border: 1px solid rgba(239,68,68,0.4); border-radius: 8px; padding: 6px 14px; font-size: 11px; color: #fca5a5; display: flex; gap: 8px; align-items: center; z-index: 60; animation: slideDown 0.3s ease; white-space: nowrap; }
-@keyframes slideDown { from{opacity:0;transform:translateX(-50%) translateY(-10px)} to{opacity:1;transform:translateX(-50%) translateY(0)} }
-.close-alert { background: none; border: none; color: #fca5a5; cursor: pointer; font-size: 14px; line-height: 1; }
-</style>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Intel Prime — Geo-Intelligence Workspace</title>
+  <link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+  <style>
+    :root{--bg:#070c14;--panel:#0f1a28;--panel2:#111d2e;--line:rgba(56,189,248,.16);--line2:rgba(56,189,248,.3);--accent:#38bdf8;--muted:#94a3b8;--dim:#64748b;--text:#e2e8f0;--red:#ef4444;--gold:#f59e0b;--green:#22c55e}
+    *{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--text);font:13px Inter,system-ui,sans-serif}button,input,textarea,select{font:inherit}button{cursor:pointer}
+    .app{height:100vh;display:grid;grid-template-rows:52px 1fr;grid-template-columns:230px minmax(420px,1fr) 360px;overflow:hidden}.topbar{grid-column:1/-1;display:flex;align-items:center;gap:14px;padding:0 16px;background:#0d1520;border-bottom:1px solid var(--line);z-index:3}.brand{display:flex;align-items:center;gap:9px;min-width:190px}.mark{display:grid;place-items:center;width:30px;height:30px;background:var(--accent);color:#07101c;border-radius:7px;font-weight:800}.brand strong{display:block;letter-spacing:.8px}.brand small{color:var(--dim);font-size:10px}.status{display:flex;gap:6px}.pill{padding:4px 8px;border:1px solid var(--line2);border-radius:99px;color:var(--accent);font-size:10px}.pill.ok{color:var(--green);border-color:rgba(34,197,94,.35)}.top-search{margin-left:auto;max-width:300px;width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 10px;color:var(--text);outline:none}.top-actions{display:flex;gap:6px}.btn{border:1px solid var(--line2);background:transparent;color:var(--accent);border-radius:6px;padding:7px 10px;font-size:11px}.btn:hover{background:rgba(56,189,248,.1)}.btn.primary{background:var(--accent);color:#07101c;border-color:var(--accent);font-weight:700}.btn.danger{color:#fca5a5;border-color:rgba(239,68,68,.35)}.sidebar,.right{background:var(--panel);overflow:auto}.sidebar{border-right:1px solid var(--line)}.right{border-left:1px solid var(--line);display:flex;flex-direction:column}.section{padding:14px;border-bottom:1px solid var(--line)}.section h2{font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--dim);margin:0 0 10px}.case-name{font-weight:700;color:var(--accent);margin-bottom:4px}.muted{color:var(--muted);font-size:11px}.layer{display:flex;align-items:center;gap:8px;padding:8px 0;color:var(--muted);font-size:12px}.dot{width:8px;height:8px;border-radius:50%;background:var(--accent)}.legend{display:flex;gap:8px;flex-wrap:wrap;color:var(--dim);font-size:10px}.legend span{display:flex;align-items:center;gap:4px}    .sidebar footer{padding:14px;color:var(--dim);font-size:10px;line-height:1.6}.sidebar a{color:var(--accent)}.backup-row{display:flex;gap:5px;margin-top:8px}.backup-row .btn{flex:1;padding:6px 4px}.backup-input{width:100%;margin-top:7px;background:var(--panel2);border:1px solid var(--line);border-radius:5px;color:var(--text);padding:7px;font-size:10px}.map-wrap{position:relative;min-width:0}.map{position:absolute;inset:0}.maplibregl-ctrl-group{background:#0d1520!important;border:1px solid var(--line2)!important}.maplibregl-ctrl button{filter:invert(1)}.map-attribution{position:absolute;bottom:4px;right:6px;background:rgba(7,12,20,.8);padding:3px 5px;color:var(--muted);font-size:10px;z-index:1}.map-attribution a{color:var(--accent)}.map-tools{position:absolute;top:12px;left:12px;display:flex;gap:6px;z-index:2}.coords{position:absolute;bottom:0;left:0;right:0;background:rgba(7,12,20,.88);border-top:1px solid var(--line);padding:7px 12px;color:var(--dim);font:10px monospace;z-index:2}.coords strong{color:var(--accent);font-weight:400}.evidence-list{display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto}.evidence-card{padding:9px;background:var(--panel2);border:1px solid var(--line);border-radius:6px;cursor:pointer}.evidence-card:hover,.evidence-card.selected{border-color:var(--accent)}.evidence-card header{display:flex;justify-content:space-between;gap:8px}.evidence-card b{font-size:12px}.badge{font-size:9px;padding:2px 5px;border-radius:4px;background:rgba(56,189,248,.1);color:var(--accent)}.card-meta{color:var(--dim);font-size:10px;margin-top:5px}.timeline{display:flex;flex-direction:column;gap:8px}.timeline-item{border-left:2px solid var(--line2);padding-left:9px}.timeline-item time{display:block;color:var(--dim);font-size:10px}.empty{color:var(--dim);font-size:11px;padding:12px 0}.right-tabs{display:flex;border-bottom:1px solid var(--line)}.tab{flex:1;padding:11px 4px;text-align:center;color:var(--dim);font-size:11px;border-bottom:2px solid transparent}.tab.active{color:var(--accent);border-bottom-color:var(--accent)}.tab-pane{display:none;flex:1;flex-direction:column;min-height:0}.tab-pane.active{display:flex}.detail{padding:14px;overflow:auto}.detail h2{font-size:16px;margin:0 0 5px}.detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0}.detail-grid label{color:var(--dim);font-size:10px}.detail-grid div{color:var(--text);margin-top:2px}.detail p{white-space:pre-wrap;color:var(--muted);line-height:1.5}.detail-actions{display:flex;gap:6px}.ai-messages{flex:1;overflow:auto;padding:12px;display:flex;flex-direction:column;gap:8px}.msg{padding:9px 10px;border:1px solid var(--line);border-radius:7px;line-height:1.5;color:var(--muted)}.msg.user{text-align:right;background:rgba(56,189,248,.08);color:var(--text)}.ai-form{padding:10px;border-top:1px solid var(--line);display:flex;gap:6px}.ai-form textarea{flex:1;background:var(--panel2);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:8px;resize:none;height:58px}.modal{position:fixed;inset:0;background:rgba(0,0,0,.65);display:none;place-items:center;z-index:10}.modal.open{display:grid}.dialog{width:min(520px,calc(100% - 24px));background:var(--panel);border:1px solid var(--line2);border-radius:9px;padding:16px;box-shadow:0 15px 50px #000}.dialog h2{margin:0 0 14px;font-size:16px}.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:4px}.field.full{grid-column:1/-1}.field label{font-size:10px;color:var(--muted)}.field input,.field select,.field textarea{background:var(--panel2);border:1px solid var(--line);border-radius:5px;color:var(--text);padding:8px;outline:none}.field textarea{min-height:70px;resize:vertical}.dialog-actions{display:flex;justify-content:flex-end;gap:7px;margin-top:14px}@media(max-width:1050px){.app{grid-template-columns:190px minmax(360px,1fr) 300px}.top-actions{display:none}}@media(max-width:760px){.app{grid-template-columns:1fr;grid-template-rows:52px 48vh auto;overflow:auto}.sidebar{display:none}.right{min-height:420px;border-left:0}.top-search{max-width:160px}.status{display:none}}
+  </style>
 </head>
 <body>
-
 <div class="app">
-
-<!-- TOPBAR -->
-<header class="topbar">
-  <div class="logo">
-    <div class="logo-mark">IP</div>
-    <div>
-      <div class="logo-text">INTEL PRIME</div>
-      <div class="logo-sub">OSINT Command Center</div>
-    </div>
-  </div>
-  <div class="topbar-sep"></div>
-  <div class="status-pills">
-    <div class="pill live"><div class="pulse"></div> Live feeds</div>
-    <div class="pill warn" id="hormuzPill"><div class="pulse"></div> Hormuz: Elevated</div>
-  </div>
-  <div class="topbar-search">
-    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    <input type="text" placeholder="Search location, vessel, flight…" id="globalSearch">
-  </div>
-  <div class="topbar-actions">
-    <button class="tbtn" onclick="window.open('https://flightradar24.com','_blank')">✈ FlightRadar24</button>
-    <button class="tbtn" onclick="window.open('https://marinetraffic.com','_blank')">⚓ MarineTraffic</button>
-    <button class="tbtn" onclick="window.open('https://zoom.earth','_blank')">🛰 Zoom.Earth</button>
-    <button class="tbtn" onclick="window.open('https://earthquake.usgs.gov/earthquakes/map/','_blank')">📡 USGS</button>
-  </div>
-</header>
-
-<!-- SIDEBAR -->
-<aside class="sidebar">
-  <div class="sidebar-section">
-    <div class="sidebar-head">Aviation</div>
-    <div class="layer-item on" data-layer="flights" onclick="toggleLayer(this)">
-      <div class="toggle on" id="t-flights"></div>
-      <div class="layer-dot" style="background:#38bdf8"></div>
-      <div class="layer-info"><div class="layer-name">Live flights</div><div class="layer-src">FlightRadar24</div></div>
-      <div class="layer-count" id="c-flights">—</div>
-    </div>
-    <div class="layer-item" data-layer="military" onclick="toggleLayer(this)">
-      <div class="toggle" id="t-military"></div>
-      <div class="layer-dot" style="background:#f59e0b"></div>
-      <div class="layer-info"><div class="layer-name">Military aircraft</div><div class="layer-src">ADS-B Exchange</div></div>
-      <div class="layer-count" id="c-military">—</div>
-    </div>
-  </div>
-  <div class="sidebar-section">
-    <div class="sidebar-head">Maritime</div>
-    <div class="layer-item on" data-layer="vessels" onclick="toggleLayer(this)">
-      <div class="toggle on" id="t-vessels"></div>
-      <div class="layer-dot" style="background:#22c55e"></div>
-      <div class="layer-info"><div class="layer-name">Ship traffic</div><div class="layer-src">MarineTraffic AIS</div></div>
-      <div class="layer-count" id="c-vessels">—</div>
-    </div>
-    <div class="layer-item on" data-layer="hormuz" onclick="toggleLayer(this)">
-      <div class="toggle on" id="t-hormuz"></div>
-      <div class="layer-dot" style="background:#ef4444"></div>
-      <div class="layer-info"><div class="layer-name">Hormuz watch</div><div class="layer-src">JMIC / UKMTO</div></div>
-      <div class="layer-count" id="c-hormuz">HOT</div>
-    </div>
-  </div>
-  <div class="sidebar-section">
-    <div class="sidebar-head">Space & sensors</div>
-    <div class="layer-item" data-layer="satellites" onclick="toggleLayer(this)">
-      <div class="toggle" id="t-satellites"></div>
-      <div class="layer-dot" style="background:#a78bfa"></div>
-      <div class="layer-info"><div class="layer-name">Satellites</div><div class="layer-src">N2YO.com</div></div>
-      <div class="layer-count" id="c-satellites">—</div>
-    </div>
-    <div class="layer-item on" data-layer="quakes" onclick="toggleLayer(this)">
-      <div class="toggle on" id="t-quakes"></div>
-      <div class="layer-dot" style="background:#ef4444"></div>
-      <div class="layer-info"><div class="layer-name">Earthquakes</div><div class="layer-src">USGS live</div></div>
-      <div class="layer-count" id="c-quakes">—</div>
-    </div>
-    <div class="layer-item" data-layer="fires" onclick="toggleLayer(this)">
-      <div class="toggle" id="t-fires"></div>
-      <div class="layer-dot" style="background:#fb923c"></div>
-      <div class="layer-info"><div class="layer-name">Active fires</div><div class="layer-src">NASA FIRMS</div></div>
-      <div class="layer-count" id="c-fires">—</div>
-    </div>
-    <div class="layer-item" data-layer="lightning" onclick="toggleLayer(this)">
-      <div class="toggle" id="t-lightning"></div>
-      <div class="layer-dot" style="background:#e879f9"></div>
-      <div class="layer-info"><div class="layer-name">Lightning</div><div class="layer-src">LightningMaps.org</div></div>
-      <div class="layer-count" id="c-lightning">—</div>
-    </div>
-  </div>
-  <div class="sidebar-section">
-    <div class="sidebar-head">Intelligence focus</div>
-    <div class="layer-item" data-layer="cables" onclick="toggleLayer(this)">
-      <div class="toggle" id="t-cables"></div>
-      <div class="layer-dot" style="background:#67e8f9"></div>
-      <div class="layer-info"><div class="layer-name">Submarine cables</div><div class="layer-src">SubmarineCableMap</div></div>
-      <div class="layer-count" id="c-cables">—</div>
-    </div>
-    <div class="layer-item" data-layer="military_zones" onclick="toggleLayer(this)">
-      <div class="toggle" id="t-military_zones"></div>
-      <div class="layer-dot" style="background:#f59e0b"></div>
-      <div class="layer-info"><div class="layer-name">Military zones</div><div class="layer-src">NOTAM / BSOC</div></div>
-      <div class="layer-count" id="c-military_zones">—</div>
-    </div>
-  </div>
-  <div class="sidebar-footer">
-    <p>Open-source data only.<br>
-      <a href="https://zoom.earth" target="_blank">Zoom.Earth</a> · 
-      <a href="https://windy.com" target="_blank">Windy.com</a> · 
-      <a href="https://globalforestwatch.org" target="_blank">Forest Watch</a>
-    </p>
-  </div>
-</aside>
-
-<!-- MAIN MAP -->
-<main class="main">
-  <canvas id="canvas"></canvas>
-  <div class="map-overlay">
-    <div class="crosshair"></div>
-  </div>
-  <div id="alertBanner" class="alert-banner" style="display:none">
-    <span>⚠</span>
-    <span id="alertText">Elevated activity detected in selected region</span>
-    <button class="close-alert" onclick="document.getElementById('alertBanner').style.display='none'">×</button>
-  </div>
-  <div class="tooltip-box" id="tooltip">
-    <strong id="tt-title">—</strong>
-    <p id="tt-body">—</p>
-    <div class="t-meta" id="tt-meta">—</div>
-  </div>
-  <div class="coords-bar">
-    <div class="coord-item">LAT <span id="latVal">—</span></div>
-    <div class="coord-item">LON <span id="lonVal">—</span></div>
-    <div class="coord-item">ZOOM <span id="zoomVal">1.0×</span></div>
-    <div class="coord-item">UTC <span id="utcVal">—</span></div>
-    <div class="coord-item">LAYERS <span id="activeCount">3</span> active</div>
-    <div class="coord-item" style="margin-left:auto"><a href="https://zoom.earth" target="_blank" style="color:var(--accent);font-size:10px;text-decoration:none">↗ Zoom.Earth</a></div>
-    <div class="coord-item"><a href="https://windy.com" target="_blank" style="color:var(--accent);font-size:10px;text-decoration:none">↗ Windy.com</a></div>
-  </div>
-</main>
-
-<!-- RIGHT PANEL -->
-<aside class="rightpanel">
-  <div class="rpanel-tabs">
-    <div class="rtab active" onclick="switchTab('ai',this)">AI Intel</div>
-    <div class="rtab" onclick="switchTab('feeds',this)">Live feeds</div>
-    <div class="rtab" onclick="switchTab('cams',this)">Remote cams</div>
-  </div>
-  <div class="rpanel-body">
-
-    <!-- AI TAB -->
-    <div class="tab-pane active" id="tab-ai">
-      <div class="ai-messages" id="aiMessages">
-        <div class="msg ai">
-          <strong>Intel Prime AI · Ready</strong>
-          Ask me anything about what you see on the map. Click any point or object on the globe for instant OSINT analysis, or use the quick prompts below.
-        </div>
-      </div>
-      <div class="ai-input-area">
-        <div class="ai-quick">
-          <button class="quick-btn" onclick="askAI('What is the current status of the Strait of Hormuz and military activity in the Persian Gulf?')">Hormuz status</button>
-          <button class="quick-btn" onclick="askAI('Analyze current military flight patterns over the Middle East based on open-source ADS-B data.')">Military air</button>
-          <button class="quick-btn" onclick="askAI('What are the most significant earthquakes in the past 24 hours and their geopolitical context?')">Seismic intel</button>
-          <button class="quick-btn" onclick="askAI('Identify any active conflict zones visible via NASA FIRMS fire data right now.')">Fire OSINT</button>
-          <button class="quick-btn" onclick="askAI('Which submarine cables pass through the Red Sea and what is their current threat level?')">Cable threats</button>
-        </div>
-        <div class="ai-row">
-          <textarea id="aiInput" placeholder="Ask Intel Prime AI… (e.g. analyze this vessel, explain this flight pattern)"></textarea>
-          <button class="send-btn" onclick="sendToAI()">Send</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- FEEDS TAB -->
-    <div class="tab-pane" id="tab-feeds">
-      <div style="flex:1;overflow-y:auto" id="feedsList"></div>
-    </div>
-
-    <!-- CAMS TAB -->
-    <div class="tab-pane" id="tab-cams">
-      <div style="overflow-y:auto;flex:1">
-        <div class="cams-grid" id="camsGrid"></div>
-        <div class="cam-links" style="padding:10px 14px">
-          <p>Live open-source camera feeds:</p>
-          <a class="cam-link-btn" href="https://www.insecam.org" target="_blank">↗ Insecam.org — public IP cams</a>
-          <a class="cam-link-btn" href="https://www.earthcam.com" target="_blank">↗ EarthCam.com — city & landmark cams</a>
-          <a class="cam-link-btn" href="https://www.skylinewebcams.com" target="_blank">↗ SkylineWebcams — Mediterranean</a>
-          <a class="cam-link-btn" href="https://explore.org/livecams" target="_blank">↗ Explore.org — nature & wildlife</a>
-          <a class="cam-link-btn" href="https://www.webcamtaxi.com" target="_blank">↗ WebcamTaxi — street views</a>
-          <a class="cam-link-btn" href="https://www.windy.com/webcams" target="_blank">↗ Windy Webcams — weather cams</a>
-          <a class="cam-link-btn" href="https://worldcam.eu" target="_blank">↗ WorldCam.eu — Europe live</a>
-          <a class="cam-link-btn" href="https://www.alertwildfire.org" target="_blank">↗ AlertWildfire — fire watch cams</a>
-        </div>
-      </div>
-    </div>
-
-  </div>
-</aside>
+  <header class="topbar">
+    <div class="brand"><div class="mark">IP</div><div><strong>INTEL PRIME</strong><small> GEO-INTELLIGENCE WORKSPACE</small></div></div>
+    <div class="status"><span class="pill ok">● Local storage ready</span><span class="pill">OSM basemap</span></div>
+    <input id="search" class="top-search" placeholder="Search evidence or entity…">
+    <div class="top-actions"><button class="btn" id="fitBtn">Fit evidence</button><button class="btn primary" id="newBtn">+ Evidence point</button></div>
+  </header>
+  <aside class="sidebar">
+    <div class="section"><h2>Active case</h2><div class="case-name">Open-source situation board</div><div class="muted">Case data stays in this browser.</div></div>
+    <div class="section"><h2>Workspace layers</h2><div class="layer"><i class="dot"></i> Evidence points <b id="count" style="margin-left:auto">0</b></div><div class="layer"><i class="dot" style="background:#f59e0b"></i> Confidence ≥ 70%</div><div class="layer"><i class="dot" style="background:#ef4444"></i> High-priority review</div></div>
+    <div class="section"><h2>Timeline</h2><div id="timeline" class="timeline"></div></div>
+    <div class="section"><h2>Map legend</h2><div class="legend"><span><i class="dot"></i> Evidence</span><span><i class="dot" style="background:#22c55e"></i> High confidence</span><span><i class="dot" style="background:#f59e0b"></i> Review</span></div></div>
+    <div class="section"><h2>Backup</h2><div class="muted">Static-safe export/import works offline. Remote sync uses an endpoint you control.</div><div class="backup-row"><button class="btn" id="exportBtn">Export JSON</button><button class="btn" id="importBtn">Restore</button></div><input id="importFile" type="file" accept="application/json" hidden><input id="backupUrl" class="backup-input" type="url" placeholder="Optional backup URL (POST/GET)"><div class="backup-row"><button class="btn" id="uploadBtn">Upload backup</button><button class="btn" id="downloadBtn">Download backup</button></div></div>
+    <footer>Basemap © <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap contributors</a>.<br>Use lawful, rate-limit aware OSM access.</footer>
+  </aside>
+  <main class="map-wrap"><div id="map" class="map"></div><div class="map-tools"><button class="btn" id="locateBtn">＋ Click map to add</button></div><div class="map-attribution">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors</div><div class="coords">LAT <strong id="lat">—</strong> &nbsp; LON <strong id="lon">—</strong> &nbsp; ZOOM <strong id="zoom">2</strong></div></main>
+  <aside class="right">
+    <div class="right-tabs"><button class="tab active" data-tab="evidence">Evidence <span id="tabCount">(0)</span></button><button class="tab" data-tab="ai">AI analysis</button></div>
+    <section id="evidencePane" class="tab-pane active"><div class="section"><h2>Evidence register</h2><div id="list" class="evidence-list"></div></div><div id="detail" class="detail"><div class="empty">Select an evidence point to inspect its source, notes, and timeline position.</div></div></section>
+    <section id="aiPane" class="tab-pane"><div id="aiMessages" class="ai-messages"><div class="msg"><b style="color:var(--accent)">Provider-neutral analysis</b><br>Configure a server-side provider to analyze selected evidence. Mapping and local evidence capture work without a key.</div></div><form id="aiForm" class="ai-form"><textarea id="aiInput" placeholder="Ask about the selected evidence…"></textarea><button class="btn primary">Analyze</button></form></section>
+  </aside>
 </div>
-
+<div id="modal" class="modal"><form id="evidenceForm" class="dialog"><h2 id="formTitle">New evidence point</h2><div class="form-grid"><div class="field full"><label for="title">Title *</label><input id="title" required maxlength="160"></div><div class="field"><label for="entityType">Entity type</label><select id="entityType"><option>Place</option><option>Person</option><option>Organization</option><option>Vessel</option><option>Aircraft</option><option>Event</option><option>Infrastructure</option></select></div><div class="field"><label for="confidence">Confidence (0–100)</label><input id="confidence" type="number" min="0" max="100" value="50"></div><div class="field"><label for="latitude">Latitude *</label><input id="latitude" type="number" min="-90" max="90" step="any" required></div><div class="field"><label for="longitude">Longitude *</label><input id="longitude" type="number" min="-180" max="180" step="any" required></div><div class="field full"><label for="sourceUrl">Source URL</label><input id="sourceUrl" type="url" placeholder="https://…"></div><div class="field full"><label for="notes">Notes</label><textarea id="notes" maxlength="5000"></textarea></div><div class="field full"><label for="observedAt">Observed at</label><input id="observedAt" type="datetime-local"></div></div><div class="dialog-actions"><button type="button" class="btn" id="cancelBtn">Cancel</button><button type="submit" class="btn primary">Save point</button></div></form></div>
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
 <script>
-const LAYERS = {
-  flights:    {color:'#38bdf8', items:[]},
-  military:   {color:'#f59e0b', items:[]},
-  vessels:    {color:'#22c55e', items:[]},
-  hormuz:     {color:'#ef4444', items:[]},
-  satellites: {color:'#a78bfa', items:[]},
-  quakes:     {color:'#ef4444', items:[]},
-  fires:      {color:'#fb923c', items:[]},
-  lightning:  {color:'#e879f9', items:[]},
-  cables:     {color:'#67e8f9', items:[]},
-  military_zones:{color:'#f59e0b', items:[]}
-};
-
-const ACTIVE = new Set(['flights','vessels','quakes','hormuz']);
-
-function initData(){
-  LAYERS.flights.items = Array.from({length:14},(_,i)=>({x:Math.random(),y:0.18+Math.random()*0.5, name:['UA-447→FRA','BA-231→LHR','TK-18→IST','AF-6→CDG','DL-208→ATL','QR-37→DOH','LH-400→MUC','EK-31→DXB','AA-100→JFK','IB-6277→MAD','AZ-610→FCO','SU-100→SVO','KL-702→AMS','MS-777→CAI'][i], meta:'ADS-B · Commercial', risk:'low'}));
-  LAYERS.military.items = Array.from({length:5},(_,i)=>({x:0.45+Math.random()*0.2,y:0.3+Math.random()*0.2, name:['USAF RC-135V Rivet Joint','RAF A400M Atlas','USN P-8 Poseidon','F-35B CAP','E-3D Sentry AWACS'][i], meta:'ADS-B Exchange · MIL', risk:'med'}));
-  LAYERS.vessels.items = Array.from({length:10},(_,i)=>({x:Math.random(),y:0.25+Math.random()*0.55, name:['VLCC Pioneer','MV Atlantic Trader','CMA CGM Atlas','MSC Gloria','NK Frontier','Maersk Sealand','Ever Given II','BW Odin','Nordic Harrier','Pacific Osprey'][i], meta:'AIS · MarineTraffic', risk:'low'}));
-  LAYERS.hormuz.items = [{x:0.618,y:0.38,name:'Strait of Hormuz — Elevated Risk Zone',meta:'JMIC Advisory · Level 3 · Sept 2026',risk:'high'},{x:0.62,y:0.4,name:'IRGC patrol zone',meta:'OSINT assessment',risk:'high'},{x:0.6,y:0.37,name:'US 5th Fleet patrol',meta:'CENTCOM',risk:'med'}];
-  LAYERS.satellites.items = Array.from({length:8},(_,i)=>({x:Math.random(),y:0.05+Math.random()*0.85, name:['ISS','Starlink-4821','Sentinel-2A','NOAA-19','Landsat-9','GPS IIF-10','TerraSAR-X','Pleiades Neo'][i], meta:'N2YO.com · LEO', risk:'low'}));
-  LAYERS.quakes.items = [{x:0.62,y:0.35,name:'M4.7 — Iran/Turkey border',meta:'USGS · 3h ago',risk:'med'},{x:0.82,y:0.42,name:'M3.8 — Japan (Honshu)',meta:'USGS · 6h ago',risk:'low'},{x:0.24,y:0.58,name:'M5.1 — Chile',meta:'USGS · 1h ago',risk:'high'},{x:0.55,y:0.31,name:'M3.2 — Greece',meta:'USGS · 8h ago',risk:'low'},{x:0.19,y:0.42,name:'M4.1 — California',meta:'USGS · 2h ago',risk:'low'}];
-  LAYERS.fires.items = [{x:0.18,y:0.4,name:'California wildfire cluster',meta:'NASA FIRMS · Active',risk:'high'},{x:0.57,y:0.38,name:'Ukraine front fires',meta:'NASA FIRMS · Conflict-related',risk:'high'},{x:0.65,y:0.5,name:'SE Asia deforestation fires',meta:'NASA FIRMS',risk:'med'},{x:0.37,y:0.55,name:'Amazon basin',meta:'NASA FIRMS',risk:'med'}];
-  LAYERS.lightning.items = Array.from({length:6},(_,i)=>({x:Math.random(),y:0.3+Math.random()*0.4,name:'Lightning strike cluster',meta:'LightningMaps.org · Live',risk:'low'}));
-  LAYERS.cables.items = [{x:0.5,y:0.35,name:'SEA-ME-WE 5 (Red Sea)',meta:'SubmarineCableMap.com',risk:'med'},{x:0.3,y:0.5,name:'TAT-14 (North Atlantic)',meta:'SubmarineCableMap.com',risk:'low'},{x:0.7,y:0.55,name:'AAG (Pacific)',meta:'SubmarineCableMap.com',risk:'low'}];
-  LAYERS.military_zones.items = [{x:0.58,y:0.37,name:'CENTCOM AOR — Active operations',meta:'NOTAM · Restricted airspace',risk:'high'},{x:0.63,y:0.36,name:'Chabahar port — US strike damage',meta:'Planet Labs SAR · Jul 2026',risk:'high'}];
-
-  Object.entries(LAYERS).forEach(([k,v])=>{
-    const el=document.getElementById('c-'+k);
-    if(el) el.textContent=v.items.length;
-  });
-}
-
-function toggleLayer(el){
-  const id=el.dataset.layer;
-  const t=document.getElementById('t-'+id);
-  if(ACTIVE.has(id)){ ACTIVE.delete(id); el.classList.remove('on'); t.classList.remove('on'); }
-  else { ACTIVE.add(id); el.classList.add('on'); t.classList.add('on'); }
-  document.getElementById('activeCount').textContent=[...ACTIVE].length;
-  drawGlobe();
-}
-
-// GLOBE
-const canvas=document.getElementById('canvas');
-const ctx=canvas.getContext('2d');
-let W,H,CX,CY,R,zoom=1,pan={x:0,y:0},isDrag=false,lastMouse={x:0,y:0};
-
-function resize(){
-  W=canvas.offsetWidth; H=canvas.offsetHeight;
-  canvas.width=W; canvas.height=H;
-  CX=W/2; CY=H/2; R=Math.min(W,H)*0.43;
-  drawGlobe();
-}
-
-function worldToCanvas(wx,wy){
-  const px=CX+pan.x+(wx-0.5)*(R*2*zoom);
-  const py=CY+pan.y+(wy-0.5)*(R*1.5*zoom);
-  return {x:px,y:py};
-}
-
-function drawGlobe(){
-  ctx.clearRect(0,0,W,H);
-  const g=ctx.createRadialGradient(CX-R*0.25,CY-R*0.25,R*0.05,CX+pan.x,CY+pan.y,R*zoom);
-  g.addColorStop(0,'#1e3a5f'); g.addColorStop(0.6,'#0d2137'); g.addColorStop(1,'#050d1a');
-  ctx.beginPath(); ctx.ellipse(CX+pan.x,CY+pan.y,R*zoom,R*zoom*0.97,0,0,Math.PI*2);
-  ctx.fillStyle=g; ctx.fill();
-  ctx.strokeStyle='rgba(56,189,248,0.25)'; ctx.lineWidth=1.5; ctx.stroke();
-
-  ctx.save(); ctx.beginPath(); ctx.ellipse(CX+pan.x,CY+pan.y,R*zoom,R*zoom*0.97,0,0,Math.PI*2); ctx.clip();
-  for(let lat=-60;lat<=60;lat+=20){
-    const ry=CY+pan.y+(lat/90)*R*zoom*0.97;
-    const hw=Math.sqrt(Math.max(0,(R*zoom)*(R*zoom)-(ry-(CY+pan.y))*(ry-(CY+pan.y))));
-    ctx.beginPath(); ctx.ellipse(CX+pan.x,ry,hw,hw*0.12,0,0,Math.PI*2);
-    ctx.strokeStyle='rgba(255,255,255,0.05)'; ctx.lineWidth=0.5; ctx.stroke();
-  }
-  for(let lng=-150;lng<=180;lng+=30){
-    const px2=CX+pan.x+(R*zoom)*Math.sin(lng*Math.PI/180)*0.8;
-    ctx.beginPath(); ctx.moveTo(px2,CY+pan.y-R*zoom*0.97); ctx.lineTo(px2,CY+pan.y+R*zoom*0.97);
-    ctx.strokeStyle='rgba(255,255,255,0.04)'; ctx.lineWidth=0.5; ctx.stroke();
-  }
-  ctx.restore();
-
-  ACTIVE.forEach(id=>{
-    const layer=LAYERS[id];
-    if(!layer) return;
-    layer.items.forEach((item,i)=>{
-      const p=worldToCanvas(item.x,item.y);
-      if(p.x<-20||p.x>W+20||p.y<-20||p.y>H+20) return;
-      ctx.save();
-      if(id==='flights'){
-        ctx.translate(p.x,p.y); ctx.rotate(i*0.3);
-        ctx.fillStyle=layer.color;
-        ctx.fillRect(-5,-1.5,10,3); ctx.fillRect(-1.5,-4,3,8);
-      } else if(id==='cables'){
-        ctx.strokeStyle=layer.color+'88'; ctx.lineWidth=2; ctx.setLineDash([4,4]);
-        ctx.beginPath(); ctx.moveTo(p.x-20,p.y); ctx.lineTo(p.x+20,p.y); ctx.stroke();
-        ctx.setLineDash([]);
-      } else {
-        const sz=id==='quakes'?6:id==='hormuz'?7:id==='military'?5:4;
-        if(item.risk==='high'){
-          ctx.beginPath(); ctx.arc(p.x,p.y,sz+5,0,Math.PI*2);
-          ctx.fillStyle=layer.color+'22'; ctx.fill();
-          ctx.beginPath(); ctx.arc(p.x,p.y,sz+2,0,Math.PI*2);
-          ctx.fillStyle=layer.color+'44'; ctx.fill();
-        }
-        ctx.beginPath(); ctx.arc(p.x,p.y,sz,0,Math.PI*2);
-        ctx.fillStyle=layer.color; ctx.fill();
-        if(id==='military_zones'){
-          ctx.strokeStyle=layer.color; ctx.lineWidth=1; ctx.setLineDash([3,3]);
-          ctx.beginPath(); ctx.arc(p.x,p.y,14,0,Math.PI*2); ctx.stroke();
-          ctx.setLineDash([]);
-        }
-      }
-      ctx.restore();
-    });
-  });
-
-  const rim=ctx.createRadialGradient(CX+pan.x,CY+pan.y,R*zoom*0.8,CX+pan.x,CY+pan.y,R*zoom);
-  rim.addColorStop(0,'transparent'); rim.addColorStop(1,'rgba(56,189,248,0.15)');
-  ctx.beginPath(); ctx.ellipse(CX+pan.x,CY+pan.y,R*zoom,R*zoom*0.97,0,0,Math.PI*2);
-  ctx.fillStyle=rim; ctx.fill();
-}
-
-function getHitItem(mx,my){
-  let found=null, best=99999;
-  ACTIVE.forEach(id=>{
-    const layer=LAYERS[id]; if(!layer) return;
-    layer.items.forEach(item=>{
-      const p=worldToCanvas(item.x,item.y);
-      const d=Math.sqrt((mx-p.x)**2+(my-p.y)**2);
-      if(d<14&&d<best){ best=d; found={item,id}; }
-    });
-  });
-  return found;
-}
-
-canvas.addEventListener('mousemove',e=>{
-  const r=canvas.getBoundingClientRect();
-  const mx=e.clientX-r.left, my=e.clientY-r.top;
-  const lon=((mx-CX-pan.x)/(R*zoom)*180).toFixed(2);
-  const lat=(-(my-CY-pan.y)/(R*zoom*0.97)*90).toFixed(2);
-  document.getElementById('latVal').textContent=lat+'°';
-  document.getElementById('lonVal').textContent=lon+'°';
-
-  if(isDrag){
-    pan.x+=mx-lastMouse.x; pan.y+=my-lastMouse.y;
-    lastMouse={x:mx,y:my};
-    drawGlobe(); return;
-  }
-
-  const hit=getHitItem(mx,my);
-  const tt=document.getElementById('tooltip');
-  if(hit){
-    document.getElementById('tt-title').textContent=hit.item.name;
-    document.getElementById('tt-body').textContent=hit.id.replace('_',' ').toUpperCase()+' · '+hit.item.risk.toUpperCase()+' RISK';
-    document.getElementById('tt-meta').textContent=hit.item.meta;
-    tt.style.display='block';
-    tt.style.left=(mx+16)+'px'; tt.style.top=(my-10)+'px';
-    canvas.style.cursor='pointer';
-  } else { tt.style.display='none'; canvas.style.cursor='crosshair'; }
-});
-
-canvas.addEventListener('mousedown',e=>{
-  const r=canvas.getBoundingClientRect();
-  lastMouse={x:e.clientX-r.left,y:e.clientY-r.top};
-  isDrag=true;
-});
-
-canvas.addEventListener('mouseup',e=>{
-  const r=canvas.getBoundingClientRect();
-  const mx=e.clientX-r.left, my=e.clientY-r.top;
-  const moved=Math.abs(mx-lastMouse.x)+Math.abs(my-lastMouse.y);
-  isDrag=false;
-  if(moved<5){
-    const hit=getHitItem(mx,my);
-    if(hit){
-      document.getElementById('aiInput').value=`Analyze "${hit.item.name}" — layer: ${hit.id}, risk: ${hit.item.risk}. Source: ${hit.item.meta}`;
-      switchTab('ai',null);
-      document.querySelectorAll('.rtab').forEach((t,i)=>{t.classList.toggle('active',i===0);});
-      sendToAI();
-    } else {
-      const lon=((mx-CX-pan.x)/(R*zoom)*180).toFixed(2);
-      const lat=(-(my-CY-pan.y)/(R*zoom*0.97)*90).toFixed(2);
-      document.getElementById('aiInput').value=`What is significant about location Lat ${lat}°, Lon ${lon}° from an OSINT/geopolitical perspective?`;
-      switchTab('ai',null);
-      document.querySelectorAll('.rtab').forEach((t,i)=>{t.classList.toggle('active',i===0);});
-    }
-  }
-});
-
-canvas.addEventListener('wheel',e=>{
-  e.preventDefault();
-  zoom=Math.max(0.6,Math.min(4,zoom-(e.deltaY>0?0.12:-0.12)));
-  document.getElementById('zoomVal').textContent=zoom.toFixed(1)+'×';
-  drawGlobe();
-},{passive:false});
-
-// AI
-const ANTHROPIC_URL='https://api.anthropic.com/v1/messages';
-let history=[];
-
-async function sendToAI(){
-  const inp=document.getElementById('aiInput');
-  const msg=inp.value.trim(); if(!msg) return;
-  addMsg(msg,'user'); inp.value='';
-  const typing=addTyping();
-
-  const activeLayers=[...ACTIVE].join(', ');
-  const system=`You are Intel Prime AI, an OSINT analyst assistant embedded in the Intel Prime command center. You analyze geopolitical events, military movements, maritime traffic, seismic activity, and open-source intelligence. Currently active data layers: ${activeLayers}. Be concise, factual, and analytical. Use intelligence community style. Separate facts from assessment. Flag confidence levels. Current date: September 2026. Key context: 2026 US-Iran war ongoing with ceasefire fragile. Strait of Hormuz under elevated threat level.`;
-
-  try {
-    const res=await fetch(ANTHROPIC_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-6',
-        max_tokens:600,
-        system,
-        messages:[...history,{role:'user',content:msg}]
-      })
-    });
-    const data=await res.json();
-    const reply=data.content?.[0]?.text||'[No response]';
-    history.push({role:'user',content:msg},{role:'assistant',content:reply});
-    if(history.length>12) history=history.slice(-10);
-    removeTyping(typing); addMsg(reply,'ai');
-  } catch(e){
-    removeTyping(typing);
-    addMsg('Connection error. Make sure the Anthropic API is accessible.','ai');
-  }
-}
-
-function askAI(q){ document.getElementById('aiInput').value=q; sendToAI(); }
-
-function addMsg(text,role){
-  const d=document.createElement('div');
-  d.className='msg '+role;
-  d.textContent=text;
-  const c=document.getElementById('aiMessages');
-  c.appendChild(d); c.scrollTop=c.scrollHeight;
-  return d;
-}
-function addTyping(){
-  const d=document.createElement('div');
-  d.className='typing';
-  d.innerHTML='<span></span><span></span><span></span>';
-  const c=document.getElementById('aiMessages');
-  c.appendChild(d); c.scrollTop=c.scrollHeight;
-  return d;
-}
-function removeTyping(el){el.remove();}
-
-document.getElementById('aiInput').addEventListener('keydown',e=>{
-  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendToAI();}
-});
-
-// FEEDS
-const FEEDS=[
-  {color:'#ef4444',src:'JMIC',time:'14:22',title:'Strait of Hormuz: US 5th Fleet escorts resumed after IRGC warning shot — Level 3 alert maintained',risk:'high'},
-  {color:'#f59e0b',src:'ADS-B Exchange',time:'14:18',title:'RC-135V Rivet Joint detected operating over eastern Mediterranean — pattern consistent with SIGINT collection',risk:'med'},
-  {color:'#ef4444',src:'USGS',time:'14:05',title:'M4.7 earthquake registered near Iran/Turkey border region — no tsunami warning',risk:'med'},
-  {color:'#22c55e',src:'MarineTraffic AIS',time:'13:50',title:'Tanker convoy of 6 VLCCs transiting Hormuz northbound — war risk insurance active',risk:'low'},
-  {color:'#fb923c',src:'NASA FIRMS',time:'13:40',title:'New fire cluster detected NW Ukraine — thermal signature consistent with artillery activity',risk:'high'},
-  {color:'#a78bfa',src:'N2YO.com',time:'13:30',title:'Sentinel-2A pass over Middle East in 47 min — SAR imagery expected within 4 hours',risk:'low'},
-  {color:'#67e8f9',src:'SubmarineCableMap',time:'13:20',title:'SEA-ME-WE 5 cable in Red Sea — elevated threat per OSINT community monitoring',risk:'med'},
-  {color:'#38bdf8',src:'FlightRadar24',time:'13:10',title:'Unusual flight path deviation — 3 commercial aircraft rerouting around CENTCOM restricted zone',risk:'low'},
-];
-
-function renderFeeds(){
-  const el=document.getElementById('feedsList');
-  el.innerHTML=FEEDS.map(f=>`
-    <div class="feed-item" onclick="askAI('Analyze this OSINT report: ${f.title.replace(/'/g,"\\'")}')">
-      <div class="fi-head">
-        <div class="fi-dot" style="background:${f.color}"></div>
-        <span class="fi-src">${f.src}</span>
-        <span class="fi-time">${f.time} UTC</span>
-      </div>
-      <div class="fi-title">${f.title}</div>
-      <span class="fi-badge ${f.risk}">${f.risk.toUpperCase()} SIGNIFICANCE</span>
-    </div>
-  `).join('');
-}
-
-// CAMS
-const CAMS=[
-  {name:'Bosphorus Strait',loc:'Istanbul, Turkey',color:'#0a1e3a'},
-  {name:'Suez Canal entry',loc:'Port Said, Egypt',color:'#0d1a2e'},
-  {name:'Dubai Ports',loc:'UAE',color:'#0a1628'},
-  {name:'Black Sea watch',loc:'Constanta, Romania',color:'#0c1e30'},
-];
-
-function renderCams(){
-  const grid=document.getElementById('camsGrid');
-  grid.innerHTML=CAMS.map((c,i)=>`
-    <div class="cam-cell">
-      <div class="cam-thumb">
-        <canvas id="cam${i}" width="140" height="79"></canvas>
-        <div class="cam-live">LIVE</div>
-      </div>
-      <div class="cam-name">${c.name}</div>
-      <div class="cam-loc">${c.loc}</div>
-    </div>
-  `).join('');
-  CAMS.forEach((_,i)=>animateCam(i));
-}
-
-function animateCam(i){
-  const c=document.getElementById('cam'+i);
-  if(!c) return;
-  const x=c.getContext('2d');
-  const colors=['#0a1e3a','#0d1a2e','#0a1628','#0c1e30'];
-  function draw(){
-    const W=c.width,H=c.height;
-    x.fillStyle=colors[i]; x.fillRect(0,0,W,H);
-    x.strokeStyle='rgba(56,189,248,0.15)'; x.lineWidth=0.5;
-    for(let j=0;j<5;j++){
-      x.beginPath(); x.moveTo(0,H*(j/5)+Math.sin(Date.now()/2000+j)*2); x.lineTo(W,H*(j/5)+Math.sin(Date.now()/2000+j+1)*2); x.stroke();
-    }
-    x.fillStyle='rgba(56,189,248,0.4)';
-    const bx=W*0.3+Math.sin(Date.now()/3000)*W*0.2, by=H*0.5+Math.cos(Date.now()/2500)*H*0.15;
-    x.fillRect(bx,by,8+Math.random()*2,3+Math.random());
-    x.fillStyle='rgba(34,197,94,0.5)'; x.font='7px monospace';
-    x.fillText(new Date().toISOString().slice(11,19)+' UTC',4,H-5);
-    requestAnimationFrame(draw);
-  }
-  draw();
-}
-
-// TABS
-function switchTab(id,el){
-  document.querySelectorAll('.tab-pane').forEach(p=>p.classList.remove('active'));
-  document.getElementById('tab-'+id).classList.add('active');
-  if(el) document.querySelectorAll('.rtab').forEach(t=>t.classList.toggle('active',t===el));
-}
-
-// UTC clock
-function updateClock(){
-  document.getElementById('utcVal').textContent=new Date().toISOString().slice(11,19)+' UTC';
-}
-setInterval(updateClock,1000); updateClock();
-
-// Search
-document.getElementById('globalSearch').addEventListener('keydown',e=>{
-  if(e.key==='Enter'){
-    const q=e.target.value.trim(); if(!q) return;
-    askAI('OSINT analysis for: '+q); switchTab('ai',null);
-    document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  }
-});
-
-initData();
-renderFeeds();
-renderCams();
-new ResizeObserver(resize).observe(canvas);
-resize();
+(() => {
+  'use strict';
+  const DB_NAME='intel-prime-workspace', STORE='evidence', FALLBACK='intel-prime-evidence-v1';
+  let db=null, points=[], selectedId=null, editingId=null, clickToAdd=false;
+  const $=id=>document.getElementById(id);
+  const escapeHtml=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const fmtDate=v=>new Date(v).toLocaleString([], {dateStyle:'medium',timeStyle:'short'});
+  function setStorageStatus(ok){document.querySelector('.status .pill').textContent=ok?'● Local storage ready':'● Local fallback active';}
+  function openDb(){return new Promise((resolve,reject)=>{if(!('indexedDB' in window))return reject(new Error('IndexedDB unavailable'));const req=indexedDB.open(DB_NAME,1);req.onupgradeneeded=()=>req.result.createObjectStore(STORE,{keyPath:'id'});req.onsuccess=()=>{db=req.result;resolve()};req.onerror=()=>reject(req.error||new Error('Could not open IndexedDB'))})}
+  function readAll(){if(!db)return Promise.resolve(JSON.parse(localStorage.getItem(FALLBACK)||'[]'));return new Promise((resolve,reject)=>{const r=db.transaction(STORE).objectStore(STORE).getAll();r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error)})}
+  function writePoint(p){if(!db){const a=JSON.parse(localStorage.getItem(FALLBACK)||'[]').filter(x=>x.id!==p.id);a.push(p);localStorage.setItem(FALLBACK,JSON.stringify(a));return Promise.resolve()}return new Promise((resolve,reject)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).put(p);r.onsuccess=resolve;r.onerror=()=>reject(r.error)})}
+  function removePoint(id){if(!db){localStorage.setItem(FALLBACK,JSON.stringify(points.filter(p=>p.id!==id)));return Promise.resolve()}return new Promise((resolve,reject)=>{const r=db.transaction(STORE,'readwrite').objectStore(STORE).delete(id);r.onsuccess=resolve;r.onerror=()=>reject(r.error)})}
+  async function load(){try{await openDb();setStorageStatus(true)}catch(e){setStorageStatus(false);try{localStorage.setItem('__ip_test','1');localStorage.removeItem('__ip_test')}catch(_){throw new Error('Neither IndexedDB nor localStorage is available; evidence cannot be persisted.')}}points=await readAll();render()}
+  function backupPayload(){return {format:'intel-prime-evidence',version:1,exportedAt:new Date().toISOString(),points}}
+  function downloadJson(payload,name){const blob=new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+  async function replacePoints(next){if(!Array.isArray(next))throw new Error('Backup must contain a points array.');const clean=next.filter(p=>p&&typeof p.title==='string'&&Number.isFinite(Number(p.latitude))&&Number.isFinite(Number(p.longitude))).map(p=>({...p,id:p.id||crypto.randomUUID()}));if(db){const tx=db.transaction(STORE,'readwrite'),store=tx.objectStore(STORE);store.clear();clean.forEach(p=>store.put(p));await new Promise((resolve,reject)=>{tx.oncomplete=resolve;tx.onerror=()=>reject(tx.error||new Error('Could not restore backup.'))})}else localStorage.setItem(FALLBACK,JSON.stringify(clean));points=await readAll();selectedId=null;render()}
+  function backupUrl(){const value=$('backupUrl').value.trim();if(!value)throw new Error('Enter a backup URL first.');return value}
+  $('exportBtn').onclick=()=>downloadJson(backupPayload(),`intel-prime-backup-${new Date().toISOString().slice(0,10)}.json`);
+  $('importBtn').onclick=()=>$('importFile').click();
+  $('importFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;try{const data=JSON.parse(await file.text());await replacePoints(data.points);alert(`Restored ${points.length} evidence point${points.length===1?'':'s'}.`)}catch(err){alert(`Could not restore backup: ${err.message}`)}e.target.value=''};
+  $('uploadBtn').onclick=async()=>{try{const response=await fetch(backupUrl(),{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(backupPayload())});if(!response.ok)throw new Error(`Backup endpoint returned HTTP ${response.status}.`);alert('Backup uploaded successfully.')}catch(err){alert(`Online backup failed: ${err.message}`)}};
+  $('downloadBtn').onclick=async()=>{try{const response=await fetch(backupUrl(),{headers:{accept:'application/json'}});if(!response.ok)throw new Error(`Backup endpoint returned HTTP ${response.status}.`);const data=await response.json();await replacePoints(data.points||data);alert(`Downloaded and restored ${points.length} evidence point${points.length===1?'':'s'}.`)}catch(err){alert(`Online restore failed: ${err.message}`)}};
+  const map=new maplibregl.Map({container:'map',center:[20,28],zoom:2,style:{version:8,sources:{osm:{type:'raster',tiles:['https://tile.openstreetmap.org/{z}/{x}/{y}.png'],tileSize:256,attribution:'© OpenStreetMap contributors'}},layers:[{id:'osm',type:'raster',source:'osm'}]}});
+  map.addControl(new maplibregl.NavigationControl(),'top-right');
+  function markerColor(p){return p.confidence>=70?'#22c55e':p.confidence<40?'#ef4444':'#f59e0b'}
+  function redrawMarkers(){document.querySelectorAll('.evidence-marker').forEach(x=>x.remove());points.forEach(p=>{const el=document.createElement('button');el.className='evidence-marker';el.title=p.title;el.style.cssText=`width:15px;height:15px;border-radius:50%;border:2px solid #fff;background:${markerColor(p)};box-shadow:0 0 0 3px rgba(7,12,20,.55);padding:0`;el.onclick=()=>select(p.id);new maplibregl.Marker({element:el}).setLngLat([p.longitude,p.latitude]).addTo(map)})}
+  function render(){points.sort((a,b)=>new Date(b.observedAt)-new Date(a.observedAt));$('count').textContent=points.length;$('tabCount').textContent=`(${points.length})`;$('list').innerHTML=points.length?points.map(p=>`<article class="evidence-card ${p.id===selectedId?'selected':''}" data-id="${p.id}"><header><b>${escapeHtml(p.title)}</b><span class="badge">${p.confidence}%</span></header><div class="card-meta">${escapeHtml(p.entityType)} · ${fmtDate(p.observedAt)}</div></article>`).join(''):'<div class="empty">No evidence captured yet.</div>';$('list').querySelectorAll('[data-id]').forEach(e=>e.onclick=()=>select(e.dataset.id));$('timeline').innerHTML=points.slice(0,8).map(p=>`<div class="timeline-item"><b>${escapeHtml(p.title)}</b><time>${fmtDate(p.observedAt)}</time></div>`).join('')||'<div class="empty">Timeline is empty.</div>';redrawMarkers();renderDetail()}
+  function select(id){selectedId=id;render();const p=points.find(x=>x.id===id);if(p)map.flyTo({center:[p.longitude,p.latitude],zoom:Math.max(map.getZoom(),6)});}
+  function renderDetail(){const p=points.find(x=>x.id===selectedId);if(!p){$('detail').innerHTML='<div class="empty">Select an evidence point to inspect its source, notes, and timeline position.</div>';return}$('detail').innerHTML=`<h2>${escapeHtml(p.title)}</h2><div class="muted">${escapeHtml(p.entityType)} · ${fmtDate(p.observedAt)}</div><div class="detail-grid"><div><label>LATITUDE</label><div>${p.latitude.toFixed(5)}</div></div><div><label>LONGITUDE</label><div>${p.longitude.toFixed(5)}</div></div><div><label>CONFIDENCE</label><div>${p.confidence}%</div></div><div><label>CAPTURED</label><div>${fmtDate(p.createdAt)}</div></div></div>${p.sourceUrl?`<p><a href="${escapeHtml(p.sourceUrl)}" target="_blank" rel="noreferrer" style="color:var(--accent)">↗ Open source</a></p>`:''}<p>${escapeHtml(p.notes)||'No notes added.'}</p><div class="detail-actions"><button class="btn" id="editSelected">Edit</button><button class="btn danger" id="deleteSelected">Delete</button><button class="btn primary" id="analyzeSelected">Analyze</button></div>`;$('editSelected').onclick=()=>openForm(p);$('deleteSelected').onclick=()=>deleteSelected(p.id);$('analyzeSelected').onclick=()=>{document.querySelector('[data-tab="ai"]').click();$('aiInput').focus()}}
+  function openForm(p){editingId=p?.id||null;$('formTitle').textContent=p?'Edit evidence point':'New evidence point';$('title').value=p?.title||'';$('entityType').value=p?.entityType||'Place';$('confidence').value=p?.confidence??50;$('latitude').value=p?.latitude??'';$('longitude').value=p?.longitude??'';$('sourceUrl').value=p?.sourceUrl||'';$('notes').value=p?.notes||'';$('observedAt').value=p?new Date(p.observedAt).toISOString().slice(0,16):new Date().toISOString().slice(0,16);$('modal').classList.add('open')}
+  function closeForm(){$('modal').classList.remove('open');editingId=null}
+  $('newBtn').onclick=()=>openForm();$('locateBtn').onclick=()=>{clickToAdd=true;$('locateBtn').textContent='Click a map location…';$('map').style.cursor='crosshair'};$('cancelBtn').onclick=closeForm;
+  $('evidenceForm').onsubmit=async e=>{e.preventDefault();const p={id:editingId||crypto.randomUUID(),title:$('title').value.trim(),entityType:$('entityType').value,confidence:Math.max(0,Math.min(100,Number($('confidence').value))),latitude:Number($('latitude').value),longitude:Number($('longitude').value),sourceUrl:$('sourceUrl').value.trim(),notes:$('notes').value.trim(),observedAt:new Date($('observedAt').value).toISOString(),createdAt:editingId?(points.find(x=>x.id===editingId)?.createdAt||new Date().toISOString()):new Date().toISOString()};if(!Number.isFinite(p.latitude)||!Number.isFinite(p.longitude))return alert('Latitude and longitude must be valid numbers.');try{await writePoint(p);points=await readAll();selectedId=p.id;closeForm();render()}catch(err){alert(`Could not save evidence: ${err.message}`)}};
+  async function deleteSelected(id){if(!confirm('Delete this evidence point?'))return;try{await removePoint(id);points=await readAll();selectedId=null;render()}catch(err){alert(`Could not delete evidence: ${err.message}`)}}
+  map.on('mousemove',e=>{$('lat').textContent=e.lngLat.lat.toFixed(4);$('lon').textContent=e.lngLat.lng.toFixed(4)});map.on('zoom',()=>{$('zoom').textContent=map.getZoom().toFixed(1)});map.on('click',e=>{if(clickToAdd){clickToAdd=false;$('locateBtn').textContent='＋ Click map to add';$('map').style.cursor='';openForm();$('latitude').value=e.lngLat.lat.toFixed(6);$('longitude').value=e.lngLat.lng.toFixed(6)}});
+  $('fitBtn').onclick=()=>{if(!points.length)return;const b=new maplibregl.LngLatBounds();points.forEach(p=>b.extend([p.longitude,p.latitude]));map.fitBounds(b,{padding:70,maxZoom:10})};$('search').oninput=e=>{const q=e.target.value.toLowerCase();document.querySelectorAll('.evidence-card').forEach(c=>c.style.display=c.textContent.toLowerCase().includes(q)?'':'none')};
+  document.querySelectorAll('.tab').forEach(t=>t.onclick=()=>{document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));t.classList.add('active');$('evidencePane').classList.toggle('active',t.dataset.tab==='evidence');$('aiPane').classList.toggle('active',t.dataset.tab==='ai')});
+  $('aiForm').onsubmit=async e=>{e.preventDefault();const question=$('aiInput').value.trim();if(!question)return;const p=points.find(x=>x.id===selectedId);$('aiMessages').insertAdjacentHTML('beforeend',`<div class="msg user">${escapeHtml(question)}</div>`);$('aiInput').value='';try{const r=await fetch('/api/analyze',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({question,evidence:p||null})});const data=await r.json();if(!r.ok)throw new Error(data.error||'Analysis failed');$('aiMessages').insertAdjacentHTML('beforeend',`<div class="msg">${escapeHtml(data.text)}</div>`)}catch(err){$('aiMessages').insertAdjacentHTML('beforeend',`<div class="msg">Analysis unavailable: ${escapeHtml(err.message)}</div>`)}};load().catch(err=>alert(err.message));
+})();
 </script>
 </body>
 </html>
