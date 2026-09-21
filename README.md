@@ -6,6 +6,8 @@ The map also loads public live feeds in the browser: USGS earthquakes (last 24 h
 
 The workspace includes a globe-mode presentation inspired by public “God’s Eye View” dashboards: toggle Globe view, switch individual live layers, and inspect popups for each public event. It intentionally does not track people. Vessels and satellites are shown as “API needed” until a lawful provider is configured; no fake live data is generated.
 
+The **Macedonia OSINT** tab is scoped to North Macedonia discovery: it can query recent public articles through GDELT, links to MIA, SDK.mk, Telma, Meta.mk, Sloboden Pechat, and Kanal 5, and links to public webcam directories plus OpenStreetMap/Overpass camera tags. These are public-source discovery links, not endorsements; respect each site's terms, robots rules, rate limits, and local law. No private CCTV access or person-identifying tracking is included.
+
 ## Run (static, no Node required)
 
 Open `index.html` directly, or publish the repository with GitHub Pages, Netlify, Cloudflare Pages, or another static host. Map, evidence capture, IndexedDB persistence, timeline, and JSON backup/restore work without Node.
