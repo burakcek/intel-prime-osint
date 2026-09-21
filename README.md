@@ -2,7 +2,7 @@
 
 The first workspace slice is a browser-based case board for geospatial evidence. It provides a MapLibre GL JS map, OSM-compatible raster tiles, a local evidence register, editing/deletion, source links, confidence, timestamps, and a timeline view. Evidence is stored in IndexedDB. If IndexedDB is unavailable, the app uses localStorage and shows a fallback status; if neither storage API is available it reports an explicit error.
 
-The map also loads public live feeds in the browser: USGS earthquakes (last 24 hours) and OpenSky aircraft for the current map viewport. NASA FIRMS active-fire data is available when you enter a FIRMS `MAP_KEY` in the Live feeds panel. Provider limits, CORS restrictions, and unavailable keys are shown in the feed status instead of being hidden.
+The map also loads public live feeds in the browser: USGS earthquakes (last 24 hours) and OpenSky aircraft for the current map viewport. NASA FIRMS active-fire data is available when you enter a FIRMS `MAP_KEY` in the Live feeds panel. Provider limits, CORS restrictions, and unavailable keys are shown in the feed status instead of being hidden. The map has a street basemap and an optional Esri World Imagery satellite basemap; both show visible provider attribution. Google Earth is not embedded because its imagery/API terms and keys are not suitable for an unauthenticated static GitHub Pages app.
 
 The live feed panel is based on the useful layer concepts from the earlier Intel Prime dashboard, but its displayed detections are now sourced from real browser requests. The earlier dashboard contained simulated flight, vessel, satellite, and fire points; those are intentionally not copied as if they were live data.
 
@@ -10,7 +10,7 @@ The workspace includes a globe-mode presentation inspired by public “God’s E
 
 The **Macedonia OSINT** tab is scoped to North Macedonia discovery: it can query recent public articles through GDELT, links to MIA, SDK.mk, Telma, Meta.mk, Sloboden Pechat, and Kanal 5, and links to public webcam directories plus OpenStreetMap/Overpass camera tags. These are public-source discovery links, not endorsements; respect each site's terms, robots rules, rate limits, and local law. No private CCTV access or person-identifying tracking is included.
 
-It also links the latest ten official MVR daily bulletins and can show their public municipality/area references on the map. Explicitly named public streets, squares, airports, and routes may be plotted at public-location precision; private addresses, homes, victims, minors, and domestic-violence locations are deliberately generalized and are not plotted.
+It also links the latest ten official MVR daily bulletins and can open them in an in-workspace reader panel, with a direct-link fallback when MVR blocks iframe embedding. Explicitly named public streets, squares, airports, and routes may be plotted at public-location precision; private addresses, homes, victims, minors, and domestic-violence locations are deliberately generalized and are not plotted.
 
 The Macedonia panel queries GDELT for Macedonia/Skopje coverage on first load and every five minutes. A separate Skopje municipality-events view classifies articles that explicitly mention a City of Skopje or nearby municipality and places the event at that municipality's public administrative centroid; it does not render municipality markers by themselves.
 
