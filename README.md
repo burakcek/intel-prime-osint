@@ -2,6 +2,8 @@
 
 The first workspace slice is a browser-based case board for geospatial evidence. It provides a MapLibre GL JS map, OSM-compatible raster tiles, a local evidence register, editing/deletion, source links, confidence, timestamps, and a timeline view. Evidence is stored in IndexedDB. If IndexedDB is unavailable, the app uses localStorage and shows a fallback status; if neither storage API is available it reports an explicit error.
 
+The map also loads public live feeds in the browser: USGS earthquakes (last 24 hours) and OpenSky aircraft for the current map viewport. NASA FIRMS active-fire data is available when you enter a FIRMS `MAP_KEY` in the Live feeds panel. Provider limits, CORS restrictions, and unavailable keys are shown in the feed status instead of being hidden.
+
 ## Run (static, no Node required)
 
 Open `index.html` directly, or publish the repository with GitHub Pages, Netlify, Cloudflare Pages, or another static host. Map, evidence capture, IndexedDB persistence, timeline, and JSON backup/restore work without Node.
