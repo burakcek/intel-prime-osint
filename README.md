@@ -8,7 +8,7 @@ The workspace includes a globe-mode presentation inspired by public “God’s E
 
 The **Macedonia OSINT** tab is scoped to North Macedonia discovery: it can query recent public articles through GDELT, links to MIA, SDK.mk, Telma, Meta.mk, Sloboden Pechat, and Kanal 5, and links to public webcam directories plus OpenStreetMap/Overpass camera tags. These are public-source discovery links, not endorsements; respect each site's terms, robots rules, rate limits, and local law. No private CCTV access or person-identifying tracking is included.
 
-It also links the latest ten official MVR daily bulletins and can show their public municipality/area references on the map. Exact private addresses, homes, victims, minors, and domestic-violence locations are deliberately generalized and are not plotted.
+It also links the latest ten official MVR daily bulletins and can show their public municipality/area references on the map. Explicitly named public streets, squares, airports, and routes may be plotted at public-location precision; private addresses, homes, victims, minors, and domestic-violence locations are deliberately generalized and are not plotted.
 
 ## Run (static, no Node required)
 
