@@ -9,8 +9,8 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{--bg:#070c14;--bg2:#0d1520;--bg3:#111d2e;--panel:#0f1a28;--border:rgba(56,189,248,.12);--border2:rgba(56,189,248,.28);--accent:#38bdf8;--gold:#f59e0b;--red:#ef4444;--green:#22c55e;--purple:#a78bfa;--orange:#fb923c;--text:#e2e8f0;--text2:#94a3b8;--text3:#64748b;--r:8px;--font:'Inter',system-ui,sans-serif}
-html,body{margin:0;padding:0;overflow:hidden;}
-.app{position:fixed;inset:0;display:grid;grid-template-rows:46px 1fr;grid-template-columns:200px 1fr 280px;}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:var(--font);overflow:hidden}
+.app{position:fixed;top:0;left:0;width:100vw;height:100vh;display:grid;grid-template-rows:46px 1fr;grid-template-columns:200px 1fr 280px;}
 .topbar{grid-column:1/-1;background:var(--bg2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px;padding:0 12px;z-index:1000;flex-wrap:nowrap;overflow:hidden}
 .logo-mark{width:24px;height:24px;background:var(--accent);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:#07101c;flex-shrink:0}
 .logo-text{font-size:11px;font-weight:600;letter-spacing:.5px;white-space:nowrap}
@@ -45,8 +45,8 @@ html,body{margin:0;padding:0;overflow:hidden;}
 .l-cnt.hot{color:var(--red);background:rgba(239,68,68,.1)}
 .sidebar-footer{margin-top:auto;padding:8px 11px;border-top:1px solid var(--border)}
 .sidebar-footer a{color:var(--accent);text-decoration:none;font-size:8px}
-.mapwrap{position:relative;overflow:hidden;}
-#map{position:absolute;inset:0;}
+.mapwrap{position:relative;overflow:hidden;width:100%;height:100%;min-height:0;}
+#map{width:100%;height:100%;min-height:0;}
 .map-status{position:absolute;bottom:0;left:0;right:0;background:rgba(7,12,20,.88);border-top:1px solid var(--border);padding:4px 10px;display:flex;gap:12px;flex-wrap:wrap;z-index:500}
 .ms{font-size:9px;color:var(--text3);display:flex;gap:3px;align-items:center}
 .ms span,.ms a{color:var(--accent);font-family:monospace;text-decoration:none;font-size:9px}
@@ -350,7 +350,7 @@ const DEMO=[
 ];
 
 function initMap(){
-  window._m=map=L.map('map',{center:[41.99,21.43],zoom:7,zoomControl:true});
+  map=L.map('map',{center:[41.99,21.43],zoom:7,zoomControl:true});
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:18,opacity:.9}).addTo(map);
   try{L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',{attribution:'© Stadia',maxZoom:18,opacity:.6}).addTo(map);}catch(e){}
   qL=L.layerGroup().addTo(map);
@@ -488,7 +488,7 @@ document.getElementById('gSearch').addEventListener('keydown',e=>{
 function tick(){document.getElementById('clk').textContent=new Date().toISOString().slice(11,19)+' UTC';}
 setInterval(tick,1000);tick();
 setInterval(()=>{if(ACTIVE.has('quakes'))loadQ();if(ACTIVE.has('fires'))loadF();},5*60*1000);
-initMap();setTimeout(()=>{try{window._m.invalidateSize();}catch(e){}},800);
+initMap();
 </script>
 </body>
 </html>
