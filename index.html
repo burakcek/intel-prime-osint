@@ -380,9 +380,11 @@ async function loadQ(){
 async function loadF(){
   setC('fires','…');
   try{
-    // FIRMS MODIS 24h world data
     const url='https://firms.modaps.eosdis.nasa.gov/data/active_fire/modis-c6.1/csv/MODIS_C6_1_Global_24h.csv';
-    const txt=await fetch(url).then(r=>{if(!r.ok)throw new Error();return r.text();});
+    let response=await fetch(url);
+    if(!response.ok)throw new Error(`FIRMS request failed (${response.status})`);
+    let txt=await response.text();
+    if(!txt.includes('latitude,longitude'))throw new Error('FIRMS returned an unexpected response');
     const rows=txt.trim().split('\n').slice(1);
     fL.clearLayers();let n=0;
     rows.forEach(row=>{
@@ -399,13 +401,48 @@ async function loadF(){
       fL.addLayer(m);n++;
     });
     setC('fires',n);
-  }catch(e){setC('fires','0 (CORS)');console.warn('FIRMS',e);}
+  }catch(e){
+    try{
+      const proxy='https://api.allorigins.win/raw?url='+encodeURIComponent('https://firms.modaps.eosdis.nasa.gov/data/active_fire/modis-c6.1/csv/MODIS_C6_1_Global_24h.csv');
+      const response=await fetch(proxy,{signal:AbortSignal.timeout(12000)});
+      if(!response.ok)throw new Error(`FIRMS proxy failed (${response.status})`);
+      const txt=await response.text();
+      if(!txt.includes('latitude,longitude'))throw new Error('FIRMS proxy returned an unexpected response');
+      const rows=txt.trim().split('\n').slice(1);
+      fL.clearLayers();let n=0;
+      rows.forEach(row=>{
+        const c=row.split(','),lat=parseFloat(c[0]),lon=parseFloat(c[1]),br=parseFloat(c[2]);
+        if(isNaN(lat)||isNaN(lon)||!((lat>35&&lat<50&&lon>13&&lon<46)||(lat>20&&lat<40&&lon>25&&lon<65)||(lat>44&&lat<55&&lon>22&&lon<42)))return;
+        const col=br>350?'#ef4444':br>330?'#fb923c':'#f59e0b';
+        const m=L.circleMarker([lat,lon],{radius:4,fillColor:col,color:'#ff6b00',weight:1,opacity:1,fillOpacity:.75});
+        m.bindPopup(mkP('FIRE',`🔥 Active fire — ${c[5]||''}`,`Brightness: ${Math.round(br)}K | ${lat.toFixed(2)},${lon.toFixed(2)}`,'med','#fb923c'),{className:'ep'});
+        fL.addLayer(m);n++;
+      });
+      setC('fires',n);
+    }catch(proxyError){setC('fires','offline');console.warn('FIRMS',e,proxyError);}
+  }
 }
 
 function initMvr(){
   const saved=localStorage.getItem('mvrEvs20');
   mvrEvs=saved?JSON.parse(saved):JSON.parse(JSON.stringify(DEMO));
   renderMvr();
+  loadMvrLive();
+}
+async function loadMvrLive(){
+  try{
+    const url='https://api.gdeltproject.org/api/v2/doc/doc?query='+encodeURIComponent('(MVR OR МВР) Macedonia')+'&mode=artlist&format=json&maxrecords=20&sort=datedesc';
+    const response=await fetch(url,{signal:AbortSignal.timeout(12000)});
+    if(!response.ok)throw new Error(`MVR feed failed (${response.status})`);
+    const data=await response.json();
+    const live=(data.articles||[]).filter(a=>a.title&&a.url).slice(0,20).map((a,i)=>({
+      id:`live-${i}-${a.seendate||Date.now()}`,title:a.title,type:'public',loc:'North Macedonia (public-source report)',
+      lat:41.9973,lon:21.4280,desc:`Source: ${a.domain||'public news'} · Open article for details.`,time:(a.seendate||'').replace(/(\d{4})(\d{2})(\d{2})T(\d{6})Z/,'$1-$2-$3 $4').slice(0,16),source:a.url
+    }));
+    if(!live.length)return;
+    mvrEvs=live;renderMvr();
+    document.getElementById('mvrCount').textContent=live.length;
+  }catch(e){console.warn('MVR live feed unavailable',e);}
 }
 function saveMvr(){localStorage.setItem('mvrEvs20',JSON.stringify(mvrEvs));document.getElementById('mvrCount').textContent=mvrEvs.length;setC('mvr',mvrEvs.length);}
 function renderMvr(){
@@ -458,7 +495,6 @@ async function callAI(msg){
   if(aiModel==='openai_free'){if(!k)throw new Error('Внеси OpenAI клуч');const r=await fetch('https://api.openai.com/v1/chat/completions',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+k},body:JSON.stringify({model:'gpt-4o-mini',max_tokens:500,messages:[{role:'system',content:sys},{role:'user',content:msg}]})});const d=await r.json();if(d.error)throw new Error(d.error.message);return d.choices[0].message.content;}
   throw new Error('Непознат модел');
 }
-let aiHist=[];
 async function sendAI(){const inp=document.getElementById('aiIn'),msg=inp.value.trim();if(!msg)return;addMsg(msg,'user');inp.value='';const ty=addTyp();try{const rep=await callAI(msg);aiHist.push({role:'user',content:msg},{role:'assistant',content:rep});if(aiHist.length>12)aiHist=aiHist.slice(-10);rmTyp(ty);addMsg(rep,'ai');}catch(e){rmTyp(ty);addMsg('⚠ '+e.message,'ai');}}
 function askAI(q){document.getElementById('aiIn').value=q;sendAI();}
 function addMsg(t,r){const d=document.createElement('div');d.className='msg '+r;d.textContent=t;const c=document.getElementById('aiMsgs');c.appendChild(d);c.scrollTop=c.scrollHeight;return d;}
