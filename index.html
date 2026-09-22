@@ -382,11 +382,10 @@ async function loadQ(){
 
 async function loadF(){
   setC('fires','…');
+  const key=localStorage.getItem('firmsMapKey')||'';
+  if(!key){setC('fires','MAP_KEY');return;}
   try{
-    const key=localStorage.getItem('firmsMapKey')||'';
-    const url=key
-      ? `https://firms.modaps.eosdis.nasa.gov/api/area/csv/${encodeURIComponent(key)}/13,35,46,50/VIIRS_SNPP_NRT/1`
-      : 'https://firms.modaps.eosdis.nasa.gov/data/active_fire/modis-c6.1/csv/MODIS_C6_1_Global_24h.csv';
+    const url=`https://firms.modaps.eosdis.nasa.gov/api/area/csv/${encodeURIComponent(key)}/13,35,46,50/VIIRS_SNPP_NRT/1`;
     let response=await fetch(url,{signal:AbortSignal.timeout(key?12000:7000)});
     if(!response.ok)throw new Error(`FIRMS request failed (${response.status})`);
     let txt=await response.text();
@@ -407,26 +406,7 @@ async function loadF(){
       fL.addLayer(m);n++;
     });
     setC('fires',n);
-  }catch(e){
-    try{
-      const proxy='https://api.allorigins.win/raw?url='+encodeURIComponent('https://firms.modaps.eosdis.nasa.gov/data/active_fire/modis-c6.1/csv/MODIS_C6_1_Global_24h.csv');
-      const response=await fetch(proxy,{signal:AbortSignal.timeout(12000)});
-      if(!response.ok)throw new Error(`FIRMS proxy failed (${response.status})`);
-      const txt=await response.text();
-      if(!txt.includes('latitude,longitude'))throw new Error('FIRMS proxy returned an unexpected response');
-      const rows=txt.trim().split('\n').slice(1);
-      fL.clearLayers();let n=0;
-      rows.forEach(row=>{
-        const c=row.split(','),lat=parseFloat(c[0]),lon=parseFloat(c[1]),br=parseFloat(c[2]);
-        if(isNaN(lat)||isNaN(lon)||!((lat>35&&lat<50&&lon>13&&lon<46)||(lat>20&&lat<40&&lon>25&&lon<65)||(lat>44&&lat<55&&lon>22&&lon<42)))return;
-        const col=br>350?'#ef4444':br>330?'#fb923c':'#f59e0b';
-        const m=L.circleMarker([lat,lon],{radius:4,fillColor:col,color:'#ff6b00',weight:1,opacity:1,fillOpacity:.75});
-        m.bindPopup(mkP('FIRE',`🔥 Active fire — ${c[5]||''}`,`Brightness: ${Math.round(br)}K | ${lat.toFixed(2)},${lon.toFixed(2)}`,'med','#fb923c'),{className:'ep'});
-        fL.addLayer(m);n++;
-      });
-      setC('fires',n);
-    }catch(proxyError){setC('fires','offline');console.warn('FIRMS',e,proxyError);}
-  }
+  }catch(e){setC('fires','error');console.warn('FIRMS',e);}
 }
 function saveFirmsKey(){
   const key=document.getElementById('firmsKey').value.trim();
