@@ -431,7 +431,28 @@ async function loadMvrLive(){
   const status=document.getElementById('mvrStatus');
   const official='https://mvr.gov.mk/mk-MK/odnosi-so-javnost/dnevni-bilteni';
   const officialIndex=[{id:'official-index',title:'Дневни билтени — официјален индекс',type:'public',loc:'Северна Македонија',lat:41.9973,lon:21.4280,desc:'Официјалниот MVR индекс ги содржи најновите дневни билтени. Отвори го изворот за целосните настани.',time:new Date().toISOString().slice(0,16).replace('T',' '),source:official,sourceLabel:'Официјален МВР'}];
-  mvrEvs=officialIndex;renderMvr();setMvrStatus('● ОФИЦИЈАЛЕН МВР ИНДЕКС · се вчитуваат најнови извештаи…',true);
+  mvrEvs=officialIndex;renderMvr();setMvrStatus('● ОФИЦИЈАЛЕН МВР · се вчитуваат PDF билтени…',true);
+  try{
+    const bulletinPage='https://mvr.gov.mk/mk-MK/odnosi-so-javnost/bilteni';
+    const bulletinResponse=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(bulletinPage),{signal:AbortSignal.timeout(12000)});
+    if(!bulletinResponse.ok)throw new Error(`official bulletin page failed (${bulletinResponse.status})`);
+    const bulletinDoc=new DOMParser().parseFromString(await bulletinResponse.text(),'text/html');
+    const pdfs=[...bulletinDoc.querySelectorAll('a[href]')].filter(a=>/\.pdf(?:$|\?)/i.test(a.href)).slice(-12);
+    if(pdfs.length){
+      const officialEvents=pdfs.reverse().map((a,i)=>({
+        id:`official-pdf-${i}-${a.href}`,title:(a.textContent||'Официјален МВР билтен').trim(),type:'public',
+        loc:'Северна Македонија',lat:41.9973,lon:21.4280,
+        desc:'Официјален MVR PDF билтен. Кликни на настанот за AI анализа и отвори го оригиналниот документ.',
+        time:new Date().toISOString().slice(0,16).replace('T',' '),source:a.href,sourceLabel:'Официјален МВР билтен'
+      }));
+      mvrEvs=officialEvents;renderMvr();
+      setMvrStatus(`● ОФИЦИЈАЛЕН МВР PDF · ${officialEvents.length} последни билтени · ${new Date().toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`,true);
+      return;
+    }
+    throw new Error('official bulletin PDFs not found');
+  }catch(officialError){
+    console.warn('Official MVR bulletin page unavailable',officialError);
+  }
   try{
     const url='https://api.gdeltproject.org/api/v2/doc/doc?query='+encodeURIComponent('(MVR OR МВР) Macedonia')+'&mode=artlist&format=json&maxrecords=20&sort=datedesc';
     const response=await fetch(url,{signal:AbortSignal.timeout(8000)});
@@ -444,7 +465,7 @@ async function loadMvrLive(){
     if(!live.length)throw new Error('no public MVR reports');
     mvrEvs=[...live,...officialIndex];renderMvr();
     setMvrStatus(`○ ЈАВНИ ИЗВЕШТАИ · GDELT · ${live.length} ставки · ${new Date().toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`,false);
-  }catch(e){setMvrStatus(`● ОФИЦИЈАЛЕН МВР ИНДЕКС · GDELT недостапен · ${new Date().toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`,true);console.warn('MVR public feed unavailable',e);}
+  }catch(e){mvrEvs=officialIndex;renderMvr();setMvrStatus(`● ОФИЦИЈАЛЕН МВР ИНДЕКС · јавни извештаи недостапни · ${new Date().toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`,true);console.warn('MVR public feed unavailable',e);}
 }
 function setMvrStatus(text,official){const e=document.getElementById('mvrStatus');if(e){e.textContent=text;e.style.color=official?'var(--green)':'var(--gold)';}}
 function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -457,12 +478,12 @@ function renderMvr(){
     const mk=L.circleMarker([ev.lat,ev.lon],{radius:9,fillColor:col,color:'#fff',weight:1.5,opacity:1,fillOpacity:.88});
     const sourceLink=ev.source?`<br><a href="${esc(ev.source)}" target="_blank" rel="noopener" style="color:var(--accent)">↗ ${esc(ev.sourceLabel||'Извор')}</a>`:'';
     mk.bindPopup(mkP(ev.type.toUpperCase(),`${ic} ${esc(ev.title)}`,`${esc(ev.loc)}<br>${esc(ev.desc||'')}${sourceLink}`,ev.type==='crime'||ev.type==='fire'?'high':'med',col),{className:'ep'});
-    mk.on('click',()=>{askAI(`MVR event: "${ev.title}" at ${ev.loc}. Type: ${ev.type}. ${ev.desc||''}. Security significance and recommended response?`);swTab('ai',null);document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('on',i===0));});
+    mk.on('click',()=>{askAI(`Analyze the latest official North Macedonia MVR bulletin titled "${ev.title}". Source: ${ev.source||'official MVR index'}. Do not invent event details; explain what can and cannot be verified from the source and identify any security-relevant items.`);swTab('ai',null);document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('on',i===0));});
     mL.addLayer(mk);
     const div=document.createElement('div');
     div.className='mvr-item';div.id='mi-'+ev.id;
     div.innerHTML=`<div><span class="mvr-type ${ev.type}">${ic} ${esc(ev.sourceLabel||'LOCAL')}</span></div><div class="mvr-title">${esc(ev.title)}</div><div style="display:flex;justify-content:space-between;margin-top:2px"><span class="mvr-loc">📍 ${esc(ev.loc)}</span><span class="mvr-time">${esc((ev.time||'').slice(11,16))}</span></div>${ev.source?`<a href="${esc(ev.source)}" target="_blank" rel="noopener" style="font-size:8px;color:var(--accent)" onclick="event.stopPropagation()">↗ Отвори извор</a>`:''}`;
-    div.onclick=()=>{map.setView([ev.lat,ev.lon],13);mk.openPopup();document.querySelectorAll('.mvr-item').forEach(el=>el.classList.remove('active'));div.classList.add('active');};
+    div.onclick=()=>{map.setView([ev.lat,ev.lon],13);mk.openPopup();askAI(`Analyze the latest official North Macedonia MVR bulletin titled "${ev.title}". Source: ${ev.source||'official MVR index'}. Do not invent event details; explain what can and cannot be verified from the source and identify any security-relevant items.`);document.querySelectorAll('.mvr-item').forEach(el=>el.classList.remove('active'));div.classList.add('active');};
     list.appendChild(div);
   });
   saveMvr();
