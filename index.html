@@ -122,7 +122,7 @@ select.f-inp{cursor:pointer}
 .cam-link{font-size:8px;padding:3px 5px;border-radius:3px;border:1px solid var(--border);color:var(--accent);text-decoration:none;display:block;text-align:center;transition:.15s}
 .cam-link:hover{background:rgba(56,189,248,.08)}
 .leaflet-container{background:#0a1628!important}
-.leaflet-tile{filter:brightness(.82) saturate(.65) hue-rotate(195deg)}
+.leaflet-tile{filter:none}
 ::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
 .ep{background:var(--panel)!important;border:1px solid var(--border2)!important;border-radius:8px!important;box-shadow:0 8px 32px rgba(0,0,0,.6)!important;min-width:180px}
 .ep .leaflet-popup-content-wrapper{background:transparent!important;box-shadow:none!important;padding:0!important}
@@ -352,8 +352,9 @@ function initMap(){
   const firmsKey=document.getElementById('firmsKey');
   if(firmsKey)firmsKey.value=localStorage.getItem('firmsMapKey')||'';
   window._m=map=L.map('map',{center:[41.99,21.43],zoom:7,zoomControl:true});
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM',maxZoom:18,opacity:.9}).addTo(map);
-  try{L.tileLayer('https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',{attribution:'© Stadia',maxZoom:18,opacity:.6}).addTo(map);}catch(e){}
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap contributors © CARTO',maxZoom:19,subdomains:'abcd'
+  }).addTo(map);
   qL=L.layerGroup().addTo(map);
   fL=L.layerGroup().addTo(map);
   mL=L.layerGroup().addTo(map);
