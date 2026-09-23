@@ -66,7 +66,7 @@ Do not assume a model name: `XAI_MODEL` must be set to the model currently confi
 
 ## Map and attribution
 
-Leaflet is loaded from its browser CDN and uses CARTO's dark raster tiles, based on OpenStreetMap data. The UI displays persistent OpenStreetMap and CARTO attribution. Follow both providers' tile usage policies, cache where appropriate, and use a production tile provider for high-volume deployments.
+Leaflet is loaded from its browser CDN and uses OpenStreetMap's standard raster tiles from `tile.openstreetmap.org`. The UI displays persistent OpenStreetMap attribution. Follow OpenStreetMap's tile usage policy, cache where appropriate, and use a production tile provider for high-volume deployments.
 
 ## Security
 
