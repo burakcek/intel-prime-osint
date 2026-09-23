@@ -224,7 +224,7 @@ select.f-inp{cursor:pointer}
     <a href="https://earthquake.usgs.gov" target="_blank">USGS</a> ·
     <a href="https://firms.modaps.eosdis.nasa.gov" target="_blank">FIRMS</a> ·
     <a href="https://zoom.earth" target="_blank">Zoom.Earth</a>
-  <div class="tab-pane" id="tab-news"><div style="padding:5px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0"><span style="font-size:10px;color:var(--accent);font-weight:600">📰 Последни вести</span><button id="nRefBtn" onclick="refreshNews()" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--text3);padding:1px 7px;font-size:8px;cursor:pointer">↻ Освежи</button></div><div class="ntabs"><div class="ntab on" onclick="swNews('mk',this)">🇲🇰 Македонија</div><div class="ntab" onclick="swNews('world',this)">🌍 Свет</div><div class="ntab" onclick="swNews('sec',this)">🔴 Безбедност</div></div><div style="flex:1;overflow-y:auto;min-height:0" id="nCont"><div style="padding:20px;text-align:center;color:var(--text3);font-size:10px">⏳ Вчитување…</div></div></div>
+  </div>
 </aside>
 <div class="mapwrap">
   <div id="map"></div>
@@ -246,6 +246,7 @@ select.f-inp{cursor:pointer}
     <div class="rtab" onclick="swTab('cams',this)">Cams</div>
   </div>
   <div class="rpbody">
+    <div class="tab-pane" id="tab-news"><div style="padding:5px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0"><span style="font-size:10px;color:var(--accent);font-weight:600">📰 Последни вести</span><button id="nRefBtn" onclick="refreshNews()" style="background:none;border:1px solid var(--border);border-radius:4px;color:var(--text3);padding:1px 7px;font-size:8px;cursor:pointer">↻ Освежи</button></div><div class="ntabs"><div class="ntab on" onclick="swNews('mk',this)">🇲🇰 Македонија</div><div class="ntab" onclick="swNews('world',this)">🌍 Свет</div><div class="ntab" onclick="swNews('sec',this)">🔴 Безбедност</div></div><div style="flex:1;overflow-y:auto;min-height:0" id="nCont"><div style="padding:20px;text-align:center;color:var(--text3);font-size:10px">⏳ Вчитување…</div></div></div>
     <div class="tab-pane on" id="tab-ai">
       <div class="ai-msgs" id="aiMsgs">
         <div class="msg ai"><strong>Intel Prime AI · Ready</strong>Кликни на маркер за анализа или користи брзи прашања. Слоеви: USGS земјотреси, NASA FIRMS пожари, MVR Билтен Македонија.</div>
