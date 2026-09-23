@@ -90,6 +90,7 @@ html,body{margin:0;padding:0;overflow:hidden}
 .fi-badge.low{border-color:rgba(34,197,94,.4);color:var(--green);background:rgba(34,197,94,.08)}
 .mvr-header{padding:8px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 .mvr-header h3{font-size:10px;color:var(--accent);font-weight:600}
+.mvr-status{padding:5px 10px;border-bottom:1px solid var(--border);font-size:8px;display:flex;align-items:center;gap:5px}
 .add-btn{background:var(--accent);color:#07101c;border:none;border-radius:4px;padding:2px 7px;font-size:9px;font-weight:600;cursor:pointer}
 .mvr-list{flex:1;overflow-y:auto}
 .mvr-item{padding:7px 10px;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
@@ -270,6 +271,7 @@ select.f-inp{cursor:pointer}
         <h3>📋 MVR Bilten — Live</h3>
         <button class="add-btn" onclick="tglForm()">+ Додај</button>
       </div>
+      <div id="mvrStatus" class="mvr-status">⏳ Проверка на официјален извор…</div>
       <div class="mvr-form" id="mvrForm">
         <input class="f-inp" id="fTitle" placeholder="Наслов на настанот">
         <div class="form-row">
@@ -418,25 +420,46 @@ function saveFirmsKey(){
 
 function initMvr(){
   const saved=localStorage.getItem('mvrEvs20');
-  mvrEvs=saved?JSON.parse(saved):JSON.parse(JSON.stringify(DEMO));
+  try{
+    const stored=saved?JSON.parse(saved):[];
+    mvrEvs=Array.isArray(stored)?stored.filter(ev=>!DEMO.some(d=>d.id===ev.id&&d.title===ev.title)):[];
+  }catch(e){mvrEvs=[];localStorage.removeItem('mvrEvs20');}
   renderMvr();
   loadMvrLive();
 }
 async function loadMvrLive(){
+  const status=document.getElementById('mvrStatus');
+  const official='https://mvr.gov.mk/mk-MK/odnosi-so-javnost/dnevni-bilteni';
   try{
+    const officialResponse=await fetch('https://api.allorigins.win/raw?url='+encodeURIComponent(official),{signal:AbortSignal.timeout(12000)});
+    if(!officialResponse.ok)throw new Error(`official MVR unavailable (${officialResponse.status})`);
+    const officialHtml=await officialResponse.text();
+    const doc=new DOMParser().parseFromString(officialHtml,'text/html');
+    const officialItems=[...doc.querySelectorAll('a[href]')].filter(a=>/bilten/i.test(a.textContent||'')||/bilten/i.test(a.href)).slice(0,20);
+    const officialEvents=officialItems.map((a,i)=>({id:`official-${i}-${a.href}`,title:(a.textContent||'Дневен билтен').trim(),type:'public',loc:'Северна Македонија',lat:41.9973,lon:21.4280,desc:'Официјален дневен билтен на МВР.',time:new Date().toISOString().slice(0,16).replace('T',' '),source:a.href,sourceLabel:'Официјален МВР'}));
+    if(officialEvents.length){
+      mvrEvs=officialEvents;renderMvr();      setMvrStatus(`● ОФИЦИЈАЛЕН МВР · ${officialEvents.length} билтени · ${new Date().toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`,true);return;
+    }
+    throw new Error('official bulletin list empty');
+  }catch(officialError){
+    try{
     const url='https://api.gdeltproject.org/api/v2/doc/doc?query='+encodeURIComponent('(MVR OR МВР) Macedonia')+'&mode=artlist&format=json&maxrecords=20&sort=datedesc';
     const response=await fetch(url,{signal:AbortSignal.timeout(12000)});
     if(!response.ok)throw new Error(`MVR feed failed (${response.status})`);
     const data=await response.json();
     const live=(data.articles||[]).filter(a=>a.title&&a.url).slice(0,20).map((a,i)=>({
       id:`live-${i}-${a.seendate||Date.now()}`,title:a.title,type:'public',loc:'North Macedonia (public-source report)',
-      lat:41.9973,lon:21.4280,desc:`Source: ${a.domain||'public news'} · Open article for details.`,time:(a.seendate||'').replace(/(\d{4})(\d{2})(\d{2})T(\d{6})Z/,'$1-$2-$3 $4').slice(0,16),source:a.url
+      lat:41.9973,lon:21.4280,desc:`Јавен news извештај: ${a.domain||'непознат извор'}.`,time:(a.seendate||'').replace(/(\d{4})(\d{2})(\d{2})T(\d{6})Z/,'$1-$2-$3 $4').slice(0,16),source:a.url,sourceLabel:'GDELT јавен извештај'
     }));
-    if(!live.length)return;
+    if(!live.length)throw new Error('no public MVR reports');
     mvrEvs=live;renderMvr();
     document.getElementById('mvrCount').textContent=live.length;
-  }catch(e){console.warn('MVR live feed unavailable',e);}
+    setMvrStatus(`○ ЈАВНИ ИЗВЕШТАИ · GDELT · ${live.length} ставки · ${new Date().toLocaleTimeString('mk-MK',{hour:'2-digit',minute:'2-digit'})}`,false);
+    }catch(e){mvrEvs=[];renderMvr();setMvrStatus('○ MVR feed offline · нема потврдени live податоци',false);console.warn('MVR feeds unavailable',officialError,e);}
+  }
 }
+function setMvrStatus(text,official){const e=document.getElementById('mvrStatus');if(e){e.textContent=text;e.style.color=official?'var(--green)':'var(--gold)';}}
+function esc(value){return String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function saveMvr(){localStorage.setItem('mvrEvs20',JSON.stringify(mvrEvs));document.getElementById('mvrCount').textContent=mvrEvs.length;setC('mvr',mvrEvs.length);}
 function renderMvr(){
   mL.clearLayers();
@@ -444,12 +467,13 @@ function renderMvr(){
   mvrEvs.slice().reverse().forEach(ev=>{
     const col=MC[ev.type]||'#94a3b8',ic=MI[ev.type]||'⚪';
     const mk=L.circleMarker([ev.lat,ev.lon],{radius:9,fillColor:col,color:'#fff',weight:1.5,opacity:1,fillOpacity:.88});
-    mk.bindPopup(mkP(ev.type.toUpperCase(),`${ic} ${ev.title}`,`${ev.loc}<br>${ev.desc||''}`,ev.type==='crime'||ev.type==='fire'?'high':'med',col),{className:'ep'});
+    const sourceLink=ev.source?`<br><a href="${esc(ev.source)}" target="_blank" rel="noopener" style="color:var(--accent)">↗ ${esc(ev.sourceLabel||'Извор')}</a>`:'';
+    mk.bindPopup(mkP(ev.type.toUpperCase(),`${ic} ${esc(ev.title)}`,`${esc(ev.loc)}<br>${esc(ev.desc||'')}${sourceLink}`,ev.type==='crime'||ev.type==='fire'?'high':'med',col),{className:'ep'});
     mk.on('click',()=>{askAI(`MVR event: "${ev.title}" at ${ev.loc}. Type: ${ev.type}. ${ev.desc||''}. Security significance and recommended response?`);swTab('ai',null);document.querySelectorAll('.rtab').forEach((t,i)=>t.classList.toggle('on',i===0));});
     mL.addLayer(mk);
     const div=document.createElement('div');
     div.className='mvr-item';div.id='mi-'+ev.id;
-    div.innerHTML=`<div><span class="mvr-type ${ev.type}">${ic} ${ev.type.toUpperCase()}</span></div><div class="mvr-title">${ev.title}</div><div style="display:flex;justify-content:space-between;margin-top:2px"><span class="mvr-loc">📍 ${ev.loc}</span><span class="mvr-time">${ev.time.slice(11,16)}</span></div>`;
+    div.innerHTML=`<div><span class="mvr-type ${ev.type}">${ic} ${esc(ev.sourceLabel||'LOCAL')}</span></div><div class="mvr-title">${esc(ev.title)}</div><div style="display:flex;justify-content:space-between;margin-top:2px"><span class="mvr-loc">📍 ${esc(ev.loc)}</span><span class="mvr-time">${esc((ev.time||'').slice(11,16))}</span></div>${ev.source?`<a href="${esc(ev.source)}" target="_blank" rel="noopener" style="font-size:8px;color:var(--accent)" onclick="event.stopPropagation()">↗ Отвори извор</a>`:''}`;
     div.onclick=()=>{map.setView([ev.lat,ev.lon],13);mk.openPopup();document.querySelectorAll('.mvr-item').forEach(el=>el.classList.remove('active'));div.classList.add('active');};
     list.appendChild(div);
   });
@@ -528,6 +552,7 @@ document.getElementById('gSearch').addEventListener('keydown',e=>{
 function tick(){document.getElementById('clk').textContent=new Date().toISOString().slice(11,19)+' UTC';}
 setInterval(tick,1000);tick();
 setInterval(()=>{if(ACTIVE.has('quakes'))loadQ();if(ACTIVE.has('fires'))loadF();},5*60*1000);
+setInterval(loadMvrLive,5*60*1000);
 initMap();[500,1000,2000].forEach(t=>setTimeout(()=>{try{if(window._m)window._m.invalidateSize();}catch(e){}},t));window.addEventListener("resize",()=>{try{if(window._m)window._m.invalidateSize();}catch(e){}});document.addEventListener("visibilitychange",()=>{if(!document.hidden)try{if(window._m)window._m.invalidateSize();}catch(e){}});
 </script>
 </body>
