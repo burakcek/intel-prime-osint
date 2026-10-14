@@ -26,6 +26,10 @@ Open `index.html` directly, or publish the repository with GitHub Pages, Netlify
 
 For GitHub Pages, enable **Settings → Pages → Source: GitHub Actions** once. The included `.github/workflows/pages.yml` then publishes the static workspace on every push to `main`.
 
+## Redesigned site
+
+A separate, responsive redesign is available at `/intel-prime-osint/modern/` after deployment. It keeps the original website at `/intel-prime-osint/` and uses the same GitHub Pages workflow. The new site includes live USGS earthquakes, NASA FIRMS fires (optional personal map key), OpenSky aircraft for the map view, public North Macedonia news, official MVR bulletin links, street/satellite maps, and locally stored evidence with JSON backup and restore. Public feeds refresh about every five minutes; evidence stays in the visitor's browser and is not shared between visitors.
+
 The optional local API can be run with Node.js 18 or newer:
 
 ```sh
